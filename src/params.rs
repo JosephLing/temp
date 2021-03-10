@@ -8,6 +8,9 @@ pub struct MethodDetails {
     pub params: HashSet<String>,
     pub headers: Vec<(String, String)>,
     pub instance_varaibles: HashSet<String>,
+    pub method_calls: HashSet<String>,
+    pub renders: Vec<(String, String)>,
+
 }
 
 fn search_for_param_in_list(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
@@ -28,6 +31,9 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();
     let mut instance_varaibles: HashSet<String> = HashSet::new();
+    let mut method_calls: HashSet<String> = HashSet::new();
+    let mut renders: Vec<(String, String)> = Vec::new();
+
     let mut buf = VecDeque::new();
 
     buf.push_back(statement);
@@ -378,6 +384,8 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
         params,
         headers,
         instance_varaibles,
+        method_calls,
+        renders,
     }
 }
 
@@ -419,6 +427,14 @@ mod params_tests {
         let mut results = search_for_param(temp).headers;
         results.sort();
         return format!("{:?}", results);
+    }
+
+    fn method_call_helper(input: &str) -> String {
+        let temp = helper(input);
+        // println!("{:#?}", *temp);
+        let mut results = search_for_param(temp).method_calls.into_iter().collect::<Vec<String>>();
+        results.sort();
+        return results.join(", ")
     }
 
     #[test]
@@ -531,6 +547,24 @@ mod params_tests {
     }
 
     #[test]
+    fn method_call() {
+        assert_eq!(
+            method_call_helper("process_jwt cookie"),
+            "process_jwt"
+        );
+    }
+
+    #[test]
+    fn method_call_not_render() {
+        assert_eq!(
+            method_call_helper("render json: foo"),
+            ""
+        );
+    }
+
+    
+
+    #[test]
     fn full_funtional_test() {
         let actual = search_for_param(helper(
             "
@@ -558,6 +592,8 @@ mod params_tests {
                 params,
                 headers,
                 instance_varaibles,
+                method_calls: HashSet::new(),
+                renders: Vec::new()
             }
         );
     }
