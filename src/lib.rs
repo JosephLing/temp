@@ -26,14 +26,14 @@ struct Controller {
 
 #[derive(Debug)]
 struct HelperModule {
-    pub  name: String,
-    pub  methods: Vec<MethodDetails>,
+    pub name: String,
+    pub methods: Vec<MethodDetails>,
 }
 #[derive(Debug)]
 struct Concern {
-    pub   name: String,
-    pub   methods: Vec<MethodDetails>,
-    pub   actions: Vec<String>, // TODO: work out what this looks like
+    pub name: String,
+    pub methods: Vec<MethodDetails>,
+    pub actions: Vec<String>, // TODO: work out what this looks like
 }
 
 #[derive(Debug)]
@@ -64,9 +64,9 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
             methods: Vec::new(),
             actions: Vec::new(),
             include: Vec::new(),
-            module: if module.is_empty(){
+            module: if module.is_empty() {
                 None
-            }else{
+            } else {
                 Some(module)
             },
         }))
@@ -81,11 +81,11 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
     let mut module_name = "".to_owned();
     let mut module_names = VecDeque::new();
     buf.push_back(node);
-    while !buf.is_empty() {
+    while let Some(temp) = buf.pop_front() {
         if let Some(new_name) = module_names.pop_front() {
             module_name = new_name;
         }
-        match buf.pop_front().unwrap() {
+        match temp {
             Node::Module(module) => {
                 if let Some(body) = module.body {
                     buf.push_back(*body);
@@ -260,17 +260,17 @@ pub fn compute(root: &PathBuf, routes_file: &PathBuf) -> Result<(), Box<dyn std:
         parse_files(&helper_path, &mut controller, &mut concerns, &mut helper)?;
         println!("--- Controllers ---");
 
-        for (name, con) in controller{
+        for (name, con) in controller {
             println!("{:?} {} {}", con.module, con.name, con.parent)
         }
         println!("--- Helpers ---");
 
-        for (name, con) in helper{
+        for (name, con) in helper {
             println!("{}", name)
         }
 
         println!("--- Concerns ---");
-        for (name, con) in concerns{
+        for (name, con) in concerns {
             println!("{}", name)
         }
     }

@@ -10,7 +10,6 @@ pub struct MethodDetails {
     pub instance_varaibles: HashSet<String>,
     pub method_calls: HashSet<String>,
     pub renders: Vec<(String, String)>,
-
 }
 
 fn search_for_param_in_list(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
@@ -38,8 +37,8 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
 
     buf.push_back(statement);
 
-    while !buf.is_empty() {
-        match *buf.pop_front().unwrap() {
+    while let Some(temp) = buf.pop_front() {
+        match *temp {
             Node::Alias(stat) => buf.push_back(stat.from),
 
             Node::And(stat) => {
@@ -389,6 +388,87 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
     }
 }
 
+fn search_send_for_method(node: &Node, check: &str, depth: i32) -> i32 {
+    let mut buf = VecDeque::new();
+    buf.push_back(node);
+    let mut count = 0;
+    while let Some(temp) = buf.pop_front() {
+        if depth != 0 && count >= depth {
+            return -1;
+        } else {
+            count += 1;
+        }
+        if let Node::Send(send) = temp {
+            if send.method_name == "params" {
+                return count;
+            }
+            if let Some(recv) = &send.recv {
+                buf.push_back(&recv);
+            }
+
+            for arg in &send.args {
+                buf.push_back(arg);
+            }
+        }
+    }
+
+    -1
+}
+
+fn search_for_index_param(node: &Node, params: &mut HashSet<String>) {
+    let mut buf = VecDeque::new();
+    buf.push_back(node);
+
+    let mut param = "".to_owned();
+
+    while let Some(temp) = buf.pop_front() {
+        match node {
+            // Node::Index(index) => {
+            //     index.
+            // }
+
+            Node::Send(send) => {
+                if send.method_name == "params" {
+                    params.insert(param.clone());
+                }
+            },
+
+            _ => {
+                // must be a string or error
+            }
+        }
+    }
+}
+
+fn parse_send(node: Node) {
+    if let Node::Send(send) = &node {
+        match search_send_for_method(&node, "params", 0) {
+            1 => {
+                // params[]
+            }
+            2 => {
+                // params.require()
+                // or
+                // params.permit()
+            }
+            3 => {
+                // params.require().permit()
+            }
+            _ => {
+                if search_send_for_method(&node, "headers", 1) == 1 {
+                    for arg in &send.args {
+                        println!("header: {}", parse_node_str(arg));
+                    }
+                } else if send.method_name == "render" {
+                    // do render stuff
+                } else {
+                    // method call
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod params_tests {
 
@@ -397,7 +477,7 @@ mod params_tests {
     use lib_ruby_parser::Parser;
     use pretty_assertions::assert_eq;
 
-    use super::{search_for_param, MethodDetails};
+    use super::{search_for_param, search_send_for_method, MethodDetails};
 
     fn helper(input: &str) -> Box<lib_ruby_parser::Node> {
         Box::new(
@@ -432,9 +512,12 @@ mod params_tests {
     fn method_call_helper(input: &str) -> String {
         let temp = helper(input);
         // println!("{:#?}", *temp);
-        let mut results = search_for_param(temp).method_calls.into_iter().collect::<Vec<String>>();
+        let mut results = search_for_param(temp)
+            .method_calls
+            .into_iter()
+            .collect::<Vec<String>>();
         results.sort();
-        return results.join(", ")
+        return results.join(", ");
     }
 
     #[test]
@@ -548,21 +631,20 @@ mod params_tests {
 
     #[test]
     fn method_call() {
-        assert_eq!(
-            method_call_helper("process_jwt cookie"),
-            "process_jwt"
-        );
+        assert_eq!(method_call_helper("process_jwt cookie"), "process_jwt");
     }
 
     #[test]
     fn method_call_not_render() {
-        assert_eq!(
-            method_call_helper("render json: foo"),
-            ""
-        );
+        assert_eq!(method_call_helper("render json: foo"), "");
     }
 
-    
+    #[test]
+    fn test_cat() {
+        let node = helper("params.require(:issue_event_type_name).permit(:dogs)");
+        println!("{:?}", search_send_for_method(&node));
+        assert_eq!(true, false);
+    }
 
     #[test]
     fn full_funtional_test() {
