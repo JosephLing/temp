@@ -238,6 +238,18 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             Node::Lvar(stat) => {
                 // parser already handles local varaible assignment and access
                 // therefore we can keep track of it
+                // verbose due to: avoiding mutable_borrow_reservation_conflict see: https://github.com/rust-lang/rust/issues/59159#
+                let mut var_exists = false;
+                let v = if let Some(value) = local_varaibles.get(&stat.name) {
+                    var_exists = true;
+                    *value
+                } else {
+                    0
+                };
+
+                if var_exists {
+                    local_varaibles.insert(stat.name, v + 1);
+                }
             }
 
             // specail case for headers and payload!!!!
@@ -486,7 +498,7 @@ mod params_tests {
     use lib_ruby_parser::Parser;
     use pretty_assertions::assert_eq;
 
-    use super::{search_for_param};
+    use super::search_for_param;
 
     fn helper(input: &str) -> Box<lib_ruby_parser::Node> {
         Box::new(
@@ -651,6 +663,23 @@ mod params_tests {
         assert_eq!(method_call_helper("render json: foo"), "");
     }
 
+    #[test]
+    fn local_varaible_access_count() {
+        let input = "
+            a = 1
+            b
+            c = 2
+            puts c
+        ";
+        let temp = helper(input);
+        // println!("{:#?}", *temp);
+        let results = search_for_param(temp).local_varaibles;
+
+        assert_eq!(results.get("a"), Some(&0));
+        assert_eq!(results.get("b"), None);
+        assert_eq!(results.get("c"), Some(&1));
+    }
+
     // #[test]
     // fn test_cat() {
     //     let node = helper("params.require(:issue_event_type_name).permit(:dogs)");
@@ -658,17 +687,16 @@ mod params_tests {
     //     assert_eq!(true, false);
     // }
 
-
-    // TODO: work out if it is possible to write a integeration test as the order of 
+    // TODO: work out if it is possible to write a integeration test as the order of
     // the fields will keep on changing
-    
+
     // #[test]
     // fn full_funtional_test() {
     //     let actual = search_for_param(helper(
     //         "
     //     p = params.permit(:user_id, :start, :id, :limit)
     //     @pizza = @pizza.negative if p[:negative]
-    
+
     //     limit = p[:limit] || 1000
     //     @pizza = @pizza.order(:id).limit(limit)
     //     ",
