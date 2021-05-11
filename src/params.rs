@@ -1,7 +1,10 @@
 use crate::utils::{self, parse_node_str, parse_optional_name};
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use lib_ruby_parser::{Node, nodes::Index};
+use lib_ruby_parser::{
+    nodes::{self, Index},
+    Node,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDetails {
@@ -63,20 +66,13 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             // Node::CaseMatch(stat) => {}
             // Node::Casgn(stat) => {}
             // Node::Cbase(stat) => {}
-            // Node::Class(stat) => {
-            //     panic!("found class");
-            //     if let Some(body) = stat.body {
-            //         buf.push_back(body);
-            //     }
-            // }
-
             Node::Const(stat) => optional_thing(&stat.scope, &mut buf),
 
             Node::ConstPattern(stat) => buf.push_back(stat.pattern),
 
             Node::CSend(stat) => search_for_param_in_list(stat.args, &mut buf),
 
-            // accessing class stuff not needed
+            // We don't currently use @@var style so not handling it
             // Node::Cvar(stat) => {}
             // Node::Cvasgn(stat) => {}
             Node::Defined(stat) => buf.push_back(stat.value),
@@ -107,7 +103,7 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
                 optional_thing(&stat.body, &mut buf);
             }
 
-            // global vars
+            // global vars $var = 1
             // Node::Gvar(stat) => {}
             // Node::Gvasgn(stat) => {}
             Node::Hash(stat) => search_for_param_in_list(stat.pairs, &mut buf),
@@ -134,12 +130,11 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
                 buf.push_back(stat.if_false);
             }
 
-            // special case!!!
             Node::Index(stat) => {
                 // recv is params
                 // index
-                if let Some(data) = params_index(stat){
-                    for item in data{
+                if let Some(data) = params_index(stat) {
+                    for item in data {
                         params.insert(item);
                     }
                 }
@@ -299,6 +294,7 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             Node::Send(stat) => {
                 // permit -> require -> params
                 // require -> params
+                // permit -> params (permit([...])) hash string to data type
                 // params
                 if let Some(recv) = stat.recv.clone() {
                     if let Node::Send(send_param) = *recv {
@@ -372,70 +368,46 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
     }
 }
 
-// fn search_send_for_method(node: &Node, check: &str, depth: i32) -> i32 {
-//     let mut buf = VecDeque::new();
-//     buf.push_back(node);
-//     let mut count = 0;
-//     while let Some(temp) = buf.pop_front() {
-//         if depth != 0 && count >= depth {
-//             return -1;
-//         } else {
-//             count += 1;
-//         }
-//         if let Node::Send(send) = temp {
-//             if send.method_name == "params" {
-//                 return count;
-//             }
-//             if let Some(recv) = &send.recv {
-//                 buf.push_back(&recv);
-//             }
+fn params_send(stat: nodes::Send) {
+    /*
 
-//             for arg in &send.args {
-//                 buf.push_back(arg);
-//             }
-//         }
-//     }
+    Allowed:
+    params.require().permit()
 
-//     -1
-// }
+    params.require()
 
-// fn parse_send(node: Node) {
-//     if let Node::Send(send) = &node {
-//         match search_send_for_method(&node, "params", 0) {
-//             1 => {
-//                 // params[]
-//             }
-//             2 => {
-//                 // params.require()
-//                 // or
-//                 // params.permit()
-//             }
-//             3 => {
-//                 // params.require().permit()
-//             }
-//             _ => {
-//                 if search_send_for_method(&node, "headers", 1) == 1 {
-//                     for arg in &send.args {
-//                         println!("header: {}", parse_node_str(arg));
-//                     }
-//                 } else if send.method_name == "render" {
-//                     // do render stuff
-//                 } else {
-//                     // method call
-//                 }
-//             }
-//         }
-//     }
-// }
+    paramrs.permit()
 
-/**
- */
-fn params_index(stat: Index) -> Option<Vec<String>>{
+    NOT allowed:
+    params.permit().require()
+
+     */
+}
+
+fn params_permit(stat: Node) {
+    /*
+    params.permit([:opportunity_id, :status => []])
+
+    params.permit(:opportunity_id, :status => [])
+
+    params.permit(:status => {})
+
+    params.permit([:status => {}])
+    */
+}
+
+fn params_require(stat: Node) {}
+
+fn params_index(stat: Index) -> Option<Vec<String>> {
     let mut params_found = false;
     let mut buf = VecDeque::new();
     buf.push_back(*stat.recv.clone());
     let mut depth = 0;
-    let mut data: Vec<String> = stat.indexes.iter().map(|x| utils::parse_node_str(x)).collect();
+    let mut data: Vec<String> = stat
+        .indexes
+        .iter()
+        .map(|x| utils::parse_node_str(x))
+        .collect();
     while let Some(temp) = buf.pop_front() {
         depth += 1;
         match temp {
@@ -443,31 +415,30 @@ fn params_index(stat: Index) -> Option<Vec<String>>{
                 if stat.method_name == "params" {
                     params_found = true;
                 }
-            },
+            }
             Node::Index(stat) => {
                 buf.push_back(*stat.recv);
-                for element in stat.indexes{
+                for element in stat.indexes {
                     buf.push_back(element);
                 }
             }
             _ => {
                 let value = parse_node_str(&temp);
-                if value != "unknown".to_owned(){
+                if value != "unknown".to_owned() {
                     data.push(value);
                 }
-            },
+            }
         }
     }
-    
-    if params_found{
-        if depth > 1{
+
+    if params_found {
+        if depth > 1 {
             data.reverse();
             Some(vec![data.join(":")])
-        }else{
+        } else {
             Some(data)
         }
-        
-    }else{
+    } else {
         None
     }
 }
@@ -548,10 +519,10 @@ mod params_tests {
     #[test]
     fn params_double_index_string() {
         /**
-            index
-                - index
-            - value
-         */
+           index
+               - index
+           - value
+        */
         assert_eq!(param_helper("params['cat']['dogs']"), "cat:dogs");
     }
 
@@ -569,7 +540,39 @@ mod params_tests {
     }
 
     #[test]
+    fn params_permit_in_array() {
+        assert_eq!(
+            param_helper("event_type = params.permit([:pizza])"),
+            "pizza"
+        );
+    }
+
+    #[test]
+    fn params_permit_array_type() {
+        assert_eq!(
+            param_helper("event_type = params.permit(:pizza => [])"),
+            "pizza[]"
+        );
+    }
+
+    #[test]
+    fn params_permit_object_type() {
+        assert_eq!(
+            param_helper("event_type = params.permit(:pizza => {})"),
+            "pizza{}"
+        );
+    }
+
+    #[test]
     fn params_permit_complex() {
+        assert_eq!(
+            param_helper("event_type = params.permit(:pizza => [], :dog => {}, :foobar)"),
+            "pizza[], dog{}, foobar"
+        );
+    }
+
+    #[test]
+    fn params_require_permit() {
         assert_eq!(
             param_helper("event_type = params.require(:issue_event_type_name).permit(:dogs)"),
             "issue_event_type_name, dogs"
