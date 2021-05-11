@@ -30,8 +30,8 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();
     let mut instance_varaibles: HashSet<String> = HashSet::new();
-    let mut method_calls: HashSet<String> = HashSet::new();
-    let mut renders: Vec<(String, String)> = Vec::new();
+    let method_calls: HashSet<String> = HashSet::new();
+    let renders: Vec<(String, String)> = Vec::new();
 
     let mut buf = VecDeque::new();
 
@@ -61,12 +61,12 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             // Node::CaseMatch(stat) => {}
             // Node::Casgn(stat) => {}
             // Node::Cbase(stat) => {}
-            Node::Class(stat) => {
-                panic!("found class");
-                if let Some(body) = stat.body {
-                    buf.push_back(body);
-                }
-            }
+            // Node::Class(stat) => {
+            //     panic!("found class");
+            //     if let Some(body) = stat.body {
+            //         buf.push_back(body);
+            //     }
+            // }
 
             //TODO: do we need this???
             Node::Const(stat) => optional_thing(&stat.scope, &mut buf),
@@ -388,86 +388,86 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
     }
 }
 
-fn search_send_for_method(node: &Node, check: &str, depth: i32) -> i32 {
-    let mut buf = VecDeque::new();
-    buf.push_back(node);
-    let mut count = 0;
-    while let Some(temp) = buf.pop_front() {
-        if depth != 0 && count >= depth {
-            return -1;
-        } else {
-            count += 1;
-        }
-        if let Node::Send(send) = temp {
-            if send.method_name == "params" {
-                return count;
-            }
-            if let Some(recv) = &send.recv {
-                buf.push_back(&recv);
-            }
+// fn search_send_for_method(node: &Node, check: &str, depth: i32) -> i32 {
+//     let mut buf = VecDeque::new();
+//     buf.push_back(node);
+//     let mut count = 0;
+//     while let Some(temp) = buf.pop_front() {
+//         if depth != 0 && count >= depth {
+//             return -1;
+//         } else {
+//             count += 1;
+//         }
+//         if let Node::Send(send) = temp {
+//             if send.method_name == "params" {
+//                 return count;
+//             }
+//             if let Some(recv) = &send.recv {
+//                 buf.push_back(&recv);
+//             }
 
-            for arg in &send.args {
-                buf.push_back(arg);
-            }
-        }
-    }
+//             for arg in &send.args {
+//                 buf.push_back(arg);
+//             }
+//         }
+//     }
 
-    -1
-}
+//     -1
+// }
 
-fn search_for_index_param(node: &Node, params: &mut HashSet<String>) {
-    let mut buf = VecDeque::new();
-    buf.push_back(node);
+// fn search_for_index_param(node: &Node, params: &mut HashSet<String>) {
+//     let mut buf = VecDeque::new();
+//     buf.push_back(node);
 
-    let mut param = "".to_owned();
+//     let mut param = "".to_owned();
 
-    while let Some(temp) = buf.pop_front() {
-        match node {
-            // Node::Index(index) => {
-            //     index.
-            // }
+//     while let Some(temp) = buf.pop_front() {
+//         match node {
+//             // Node::Index(index) => {
+//             //     index.
+//             // }
 
-            Node::Send(send) => {
-                if send.method_name == "params" {
-                    params.insert(param.clone());
-                }
-            },
+//             Node::Send(send) => {
+//                 if send.method_name == "params" {
+//                     params.insert(param.clone());
+//                 }
+//             },
 
-            _ => {
-                // must be a string or error
-            }
-        }
-    }
-}
+//             _ => {
+//                 // must be a string or error
+//             }
+//         }
+//     }
+// }
 
-fn parse_send(node: Node) {
-    if let Node::Send(send) = &node {
-        match search_send_for_method(&node, "params", 0) {
-            1 => {
-                // params[]
-            }
-            2 => {
-                // params.require()
-                // or
-                // params.permit()
-            }
-            3 => {
-                // params.require().permit()
-            }
-            _ => {
-                if search_send_for_method(&node, "headers", 1) == 1 {
-                    for arg in &send.args {
-                        println!("header: {}", parse_node_str(arg));
-                    }
-                } else if send.method_name == "render" {
-                    // do render stuff
-                } else {
-                    // method call
-                }
-            }
-        }
-    }
-}
+// fn parse_send(node: Node) {
+//     if let Node::Send(send) = &node {
+//         match search_send_for_method(&node, "params", 0) {
+//             1 => {
+//                 // params[]
+//             }
+//             2 => {
+//                 // params.require()
+//                 // or
+//                 // params.permit()
+//             }
+//             3 => {
+//                 // params.require().permit()
+//             }
+//             _ => {
+//                 if search_send_for_method(&node, "headers", 1) == 1 {
+//                     for arg in &send.args {
+//                         println!("header: {}", parse_node_str(arg));
+//                     }
+//                 } else if send.method_name == "render" {
+//                     // do render stuff
+//                 } else {
+//                     // method call
+//                 }
+//             }
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod params_tests {
@@ -477,7 +477,7 @@ mod params_tests {
     use lib_ruby_parser::Parser;
     use pretty_assertions::assert_eq;
 
-    use super::{search_for_param, search_send_for_method, MethodDetails};
+    use super::{search_for_param, MethodDetails};
 
     fn helper(input: &str) -> Box<lib_ruby_parser::Node> {
         Box::new(

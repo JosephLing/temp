@@ -58,6 +58,10 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
     if superclass.is_empty() {
         Err("single file classes not supported".to_string())
     } else if superclass != "StandardError" {
+        if let Some(body) = class.body{
+            // methods
+            params::search_for_param(body);
+        }
         Ok(File::Controller(Controller {
             name,
             parent: superclass,
@@ -260,17 +264,17 @@ pub fn compute(root: &PathBuf, routes_file: &PathBuf) -> Result<(), Box<dyn std:
         parse_files(&helper_path, &mut controller, &mut concerns, &mut helper)?;
         println!("--- Controllers ---");
 
-        for (name, con) in controller {
+        for (_name, con) in controller {
             println!("{:?} {} {}", con.module, con.name, con.parent)
         }
         println!("--- Helpers ---");
 
-        for (name, con) in helper {
+        for (name, _con) in helper {
             println!("{}", name)
         }
 
         println!("--- Concerns ---");
-        for (name, con) in concerns {
+        for (name, _con) in concerns {
             println!("{}", name)
         }
     }
