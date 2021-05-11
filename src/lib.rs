@@ -97,6 +97,18 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                     buf.push_back(*body);
                 }
                 module_names.push_back(module_name.clone() + &parse_name(module.name));
+            },
+            Node::Def(_def) => {
+                files.push(File::Module(HelperModule {
+                    name: module_name.clone(),
+                    methods: Vec::new(),
+                }))
+            },
+            Node::Defs(_def) => {
+                files.push(File::Module(HelperModule {
+                    name: module_name.clone(),
+                    methods: Vec::new(),
+                }))
             }
             Node::Class(class) => files.push(parse_class(class, module_name.clone())?),
             Node::Begin(begin) => {
@@ -166,7 +178,10 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                     }))
                 }
             }
-            _ => return Err("error unknown syntax found in file".to_string()),
+            _ => {
+                println!("{:?}", temp);
+                return Err("error unknown syntax found in file HERE ".to_string())
+            },
         }
     }
 

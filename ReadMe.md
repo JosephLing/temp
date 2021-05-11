@@ -4,6 +4,7 @@
 2. close and reopen terminal 
 3. Run `cargo check` and it should install all the packages and it will check whether or not it can compile the code for you
 4. install https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer (note: need to click on download now pop up for it to work)
+5. Run `cargo run tests/resources/default_test_case` 
 
 # Top tips for working on the project:
 - checking out the AST/strange ruby syntax: https://lib-ruby-parser.github.io/wasm-bindings/
@@ -32,7 +33,7 @@ for (k, v) in &local_varaibles {
 
 ```ruby
 
-    class ApplicationController
+    class ApplicationController < ActionController::API
         include HttpResponses
 
         before_action: auth_check
@@ -43,7 +44,7 @@ for (k, v) in &local_varaibles {
     end
 
     class PagesController < ApplicationController
-        before_action: get_page_number
+        before_action :get_page_number
 
         def get_page_number
             @page_index = params[:index]
@@ -61,7 +62,7 @@ for (k, v) in &local_varaibles {
         end
     end
 
-    class PageHelper
+    module PageHelper
         def blog_category
             Blogs.find(params[:cat])
         end
@@ -70,8 +71,9 @@ for (k, v) in &local_varaibles {
     module HttpResponses
         extend ActiveSupport::Concern
 
-    def json_ok(obj, response)
-        render :status => response, :json => obj
+        def json_ok(obj, response)
+            render :status => response, :json => obj
+        end
     end
 
     # routes.rb
