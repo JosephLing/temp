@@ -8,7 +8,7 @@
 # Top tips for working on the project:
 - checking out the AST/strange ruby syntax: https://lib-ruby-parser.github.io/wasm-bindings/
 - write lots of unit tests for strange edge cases
-
+- `cargo test -- <mod name of the tests you want to run>` e.g. `cargo test -- routes_parsing`
 # tasks:
 - parasing params
     - index

@@ -81,11 +81,13 @@ mod routes_parsing {
 
         end
         ";
-        let result = parse_routes(helper(input));
+        let result = parse_routes(*helper(input));
         assert_eq!(result.is_ok(), true, "parsed okay");
-        assert_eq!(result.unwrap().len(), 1);
+        
+        let result = result.unwrap();
+        assert_eq!(result.len(), 1);
         assert_eq!(
-            result.unwrap()[0],
+            result[0],
             Request {
                 method: RequestMethod::POST,
                 prefix: "email_processor".to_string(),
