@@ -10,9 +10,11 @@ use params::MethodDetails;
 use utils::{get_node_name, parse_name, parse_superclass};
 use walkdir::{DirEntry, WalkDir};
 
+use crate::routes::parse_routes;
+
 mod params;
-mod utils;
 mod routes;
+mod utils;
 #[derive(Debug)]
 struct Controller {
     pub name: String,
@@ -58,7 +60,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
     if superclass.is_empty() {
         Err("single file classes not supported".to_string())
     } else if superclass != "StandardError" {
-        if let Some(body) = class.body{
+        if let Some(body) = class.body {
             // methods
             params::search_for_param(body);
         }
@@ -237,46 +239,54 @@ fn parse_files(
     Ok(())
 }
 
-pub fn compute(root: &PathBuf, routes_file: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     // TODO: abstract these out so unit tests can written... ah more work but will help
-    let routes_file = fs::read_to_string(routes_file);
+    let mut concerns: HashMap<String, Concern> = HashMap::new();
+    let mut helper: HashMap<String, HelperModule> = HashMap::new();
+    let mut controller: HashMap<String, Controller> = HashMap::new();
 
-    if let Err(e) = routes_file {
-        return Err(format!("Error in reading routes file: {}", e.to_string()).into());
-    } else {
-        let mut concerns: HashMap<String, Concern> = HashMap::new();
-        let mut helper: HashMap<String, HelperModule> = HashMap::new();
-        let mut controller: HashMap<String, Controller> = HashMap::new();
+    let mut route_path = root.clone();
+    route_path.push("config");
+    route_path.push("routes.rb");
+    let routes = parse_routes(
+        Parser::new(&fs::read(route_path)?, Default::default())
+            .do_parse()
+            .ast
+            .unwrap(),
+    );
+    println!("Routes {:?}", routes);
 
-        let mut helper_path = root.clone();
-        helper_path.push("helpers");
+    let mut app_dir = root.clone();
+    app_dir.push("app");
 
-        let mut controllers_path = root.clone();
+    let mut helper_path = app_dir.clone();
+    helper_path.push("helpers");
 
-        controllers_path.push("controllers");
+    let mut controllers_path = app_dir.clone();
 
-        parse_files(
-            &controllers_path,
-            &mut controller,
-            &mut concerns,
-            &mut helper,
-        )?;
-        parse_files(&helper_path, &mut controller, &mut concerns, &mut helper)?;
-        println!("--- Controllers ---");
+    controllers_path.push("controllers");
 
-        for (_name, con) in controller {
-            println!("{:?} {} {}", con.module, con.name, con.parent)
-        }
-        println!("--- Helpers ---");
+    parse_files(
+        &controllers_path,
+        &mut controller,
+        &mut concerns,
+        &mut helper,
+    )?;
+    parse_files(&helper_path, &mut controller, &mut concerns, &mut helper)?;
+    println!("--- Controllers ---");
 
-        for (name, _con) in helper {
-            println!("{}", name)
-        }
+    for (_name, con) in controller {
+        println!("{:?} {} {}", con.module, con.name, con.parent)
+    }
+    println!("--- Helpers ---");
 
-        println!("--- Concerns ---");
-        for (name, _con) in concerns {
-            println!("{}", name)
-        }
+    for (name, _con) in helper {
+        println!("{}", name)
+    }
+
+    println!("--- Concerns ---");
+    for (name, _con) in concerns {
+        println!("{}", name)
     }
 
     Ok(())

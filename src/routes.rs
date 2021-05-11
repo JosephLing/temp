@@ -47,9 +47,7 @@ pub fn parse_routes(node: Node) -> Result<Vec<Request>, String> {
     let mut buf = VecDeque::new();
     buf.push_back(node);
     let routes: Vec<Request> = Vec::new();
-    while let Some(temp) = buf.pop_front() {
-        
-    }
+    while let Some(temp) = buf.pop_front() {}
     Err("failed to parse".to_owned())
 }
 
@@ -83,7 +81,7 @@ mod routes_parsing {
         ";
         let result = parse_routes(*helper(input));
         assert_eq!(result.is_ok(), true, "parsed okay");
-        
+
         let result = result.unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(
