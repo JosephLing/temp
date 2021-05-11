@@ -114,9 +114,15 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                         }
                         Node::Send(send) => {
                             if send.method_name == "require" {
-                            } else if send.method_name == "private" {
+                                // TODO: no validation but keeping track of how dependencies are used, would be useful
+                            } 
+                            // ignoring visibility for now
+                            else if send.method_name == "private" {
+                            } else if send.method_name == "private_class_method" {
                                 // do nothing
-                            } else if send.method_name == "extend" {
+                            } 
+                            
+                            else if send.method_name == "extend" {
                                 let mut found = false;
                                 for arg in &send.args {
                                     if get_node_name(&arg)? == "ActiveSupport::Concern" {

@@ -70,12 +70,10 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             //     }
             // }
 
-            //TODO: do we need this???
             Node::Const(stat) => optional_thing(&stat.scope, &mut buf),
 
             Node::ConstPattern(stat) => buf.push_back(stat.pattern),
 
-            // method name look up here!
             Node::CSend(stat) => search_for_param_in_list(stat.args, &mut buf),
 
             // accessing class stuff not needed
@@ -218,7 +216,7 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
                 optional_thing(&stat.right, &mut buf);
             }
 
-            // specail case!!!
+            // TODO: do we want to keep track of instance varaibles?? seems like it is isn't necessary
             // Node::Ivar(stat) => stat.name,
             Node::Ivasgn(stat) => {
                 instance_varaibles.insert(stat.name);
@@ -226,15 +224,11 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
                 optional_thing(&stat.value, &mut buf)
             }
 
-            // Node::Kwarg(stat) => {}
             Node::Kwargs(stat) => search_for_param_in_list(stat.pairs, &mut buf),
             Node::KwBegin(stat) => search_for_param_in_list(stat.statements, &mut buf),
             Node::Kwoptarg(stat) => buf.push_back(stat.default),
             Node::Kwsplat(stat) => buf.push_back(stat.value),
 
-            // Node::Lambda(stat) => {}
-
-            // Node::Line(stat) => {}
             Node::Lvar(stat) => {
                 // parser already handles local varaible assignment and access
                 // therefore we can keep track of it
