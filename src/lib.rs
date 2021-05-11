@@ -12,7 +12,7 @@ use walkdir::{DirEntry, WalkDir};
 
 mod params;
 mod utils;
-
+mod routes;
 #[derive(Debug)]
 struct Controller {
     pub name: String,
