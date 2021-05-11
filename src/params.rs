@@ -138,7 +138,7 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             Node::Index(stat) => {
                 // recv is params
                 // index
-
+                println!("{:?}", stat); // debug
                 match *stat.recv {
                     Node::Const(con) => {
                         if con.name == "params" {
@@ -604,7 +604,7 @@ mod params_tests {
                     @results = params[:cat]
                 end"
             ),
-            "cat, id"
+            "cat, idasdf"
         );
     }
 
@@ -642,7 +642,7 @@ mod params_tests {
     #[test]
     fn test_cat() {
         let node = helper("params.require(:issue_event_type_name).permit(:dogs)");
-        println!("{:?}", search_send_for_method(&node));
+        // println!("{:?}", search_send_for_method(&node));
         assert_eq!(true, false);
     }
 
