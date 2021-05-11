@@ -17,6 +17,16 @@
 - hooking up the controller includes and parent class together nicely 
     - allowing a second parse to know about all the functions/methods that should be available
 
+# future work:
+Method details stores a hash map of every time a local varaible is accessed, therefore we can do:
+```rust
+for (k, v) in &local_varaibles {
+        if *v == 0 {
+            println!("local varaible '{}' is never used", k);
+        }
+    }
+```
+(side note: this pretty much comes for free as the parser handles this for us)
 
 # Goal:
 
