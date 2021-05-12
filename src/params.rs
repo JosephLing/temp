@@ -28,13 +28,13 @@ pub struct MethodDetails {
     pub renders: Vec<(String, String)>,           // TODO: implement this one
 }
 
-fn search_for_param_in_list(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
+fn handle_vector_of_nodes(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
     for stat in &statements {
         buf.push_back(Box::new(stat.clone()));
     }
 }
 
-fn optional_thing(body: &Option<Box<Node>>, buf: &mut VecDeque<Box<Node>>) {
+fn handle_optional_node(body: &Option<Box<Node>>, buf: &mut VecDeque<Box<Node>>) {
     if let Some(body) = body {
         buf.push_back((*body).clone());
     }
@@ -68,77 +68,77 @@ pub fn create_method_details(
             }
             Node::AndAsgn(stat) => buf.push_back(stat.value),
 
-            Node::Array(stat) => search_for_param_in_list(stat.elements, &mut buf),
-            Node::ArrayPattern(stat) => search_for_param_in_list(stat.elements, &mut buf),
-            Node::ArrayPatternWithTail(stat) => search_for_param_in_list(stat.elements, &mut buf),
+            Node::Array(stat) => handle_vector_of_nodes(stat.elements, &mut buf),
+            Node::ArrayPattern(stat) => handle_vector_of_nodes(stat.elements, &mut buf),
+            Node::ArrayPatternWithTail(stat) => handle_vector_of_nodes(stat.elements, &mut buf),
 
-            Node::Begin(stat) => search_for_param_in_list(stat.statements, &mut buf),
+            Node::Begin(stat) => handle_vector_of_nodes(stat.statements, &mut buf),
 
             // note: ignore optional elements of block here
-            Node::Block(stat) => optional_thing(&stat.body, &mut buf),
+            Node::Block(stat) => handle_optional_node(&stat.body, &mut buf),
             Node::BlockPass(stat) => buf.push_back(stat.value),
 
             // Node::Case(stat) => {}
             // Node::CaseMatch(stat) => {}
             // Node::Casgn(stat) => {}
             // Node::Cbase(stat) => {}
-            Node::Const(stat) => optional_thing(&stat.scope, &mut buf),
+            Node::Const(stat) => handle_optional_node(&stat.scope, &mut buf),
 
             Node::ConstPattern(stat) => buf.push_back(stat.pattern),
 
-            Node::CSend(stat) => search_for_param_in_list(stat.args, &mut buf),
+            Node::CSend(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
             // We don't currently use @@var style so not handling it
             // Node::Cvar(stat) => {}
             // Node::Cvasgn(stat) => {}
             Node::Defined(stat) => buf.push_back(stat.value),
 
-            Node::Dstr(stat) => search_for_param_in_list(stat.parts, &mut buf),
-            Node::Dsym(stat) => search_for_param_in_list(stat.parts, &mut buf),
+            Node::Dstr(stat) => handle_vector_of_nodes(stat.parts, &mut buf),
+            Node::Dsym(stat) => handle_vector_of_nodes(stat.parts, &mut buf),
 
             Node::EFlipFlop(stat) => {
-                optional_thing(&stat.left, &mut buf);
-                optional_thing(&stat.right, &mut buf)
+                handle_optional_node(&stat.left, &mut buf);
+                handle_optional_node(&stat.right, &mut buf)
             }
 
             Node::Ensure(stat) => {
-                optional_thing(&stat.ensure, &mut buf);
-                optional_thing(&stat.body, &mut buf)
+                handle_optional_node(&stat.ensure, &mut buf);
+                handle_optional_node(&stat.body, &mut buf)
             }
 
             Node::Erange(stat) => {
-                optional_thing(&stat.left, &mut buf);
-                optional_thing(&stat.right, &mut buf)
+                handle_optional_node(&stat.left, &mut buf);
+                handle_optional_node(&stat.right, &mut buf)
             }
 
-            Node::FindPattern(stat) => search_for_param_in_list(stat.elements, &mut buf),
+            Node::FindPattern(stat) => handle_vector_of_nodes(stat.elements, &mut buf),
 
             Node::For(stat) => {
                 buf.push_back(stat.iterator);
                 buf.push_back(stat.iteratee);
-                optional_thing(&stat.body, &mut buf);
+                handle_optional_node(&stat.body, &mut buf);
             }
 
             // global vars $var = 1
             // Node::Gvar(stat) => {}
             // Node::Gvasgn(stat) => {}
-            Node::Hash(stat) => search_for_param_in_list(stat.pairs, &mut buf),
-            Node::HashPattern(stat) => search_for_param_in_list(stat.elements, &mut buf),
+            Node::Hash(stat) => handle_vector_of_nodes(stat.pairs, &mut buf),
+            Node::HashPattern(stat) => handle_vector_of_nodes(stat.elements, &mut buf),
 
             Node::If(stat) => {
                 buf.push_back(stat.cond);
-                optional_thing(&stat.if_true, &mut buf);
-                optional_thing(&stat.if_false, &mut buf)
+                handle_optional_node(&stat.if_true, &mut buf);
+                handle_optional_node(&stat.if_false, &mut buf)
             }
             Node::IfGuard(stat) => buf.push_back(stat.cond),
             Node::IFlipFlop(stat) => {
-                optional_thing(&stat.left, &mut buf);
-                optional_thing(&stat.right, &mut buf);
+                handle_optional_node(&stat.left, &mut buf);
+                handle_optional_node(&stat.right, &mut buf);
             }
             Node::IfMod(stat) => {
                 buf.push_back(stat.cond);
-                optional_thing(&stat.if_true, &mut buf);
-                optional_thing(&stat.if_false, &mut buf)
+                handle_optional_node(&stat.if_true, &mut buf);
+                handle_optional_node(&stat.if_false, &mut buf)
             }
             Node::IfTernary(stat) => {
                 buf.push_back(stat.cond);
@@ -172,24 +172,24 @@ pub fn create_method_details(
                             }
                         }
                     } else {
-                        search_for_param_in_list(send.args, &mut buf);
-                        optional_thing(&send.recv, &mut buf);
+                        handle_vector_of_nodes(send.args, &mut buf);
+                        handle_optional_node(&send.recv, &mut buf);
                     }
                 } else {
                     buf.push_back(stat.recv);
-                    search_for_param_in_list(stat.indexes, &mut buf);
+                    handle_vector_of_nodes(stat.indexes, &mut buf);
                 }
             }
 
             Node::InPattern(stat) => {
                 buf.push_back(stat.pattern);
-                optional_thing(&stat.guard, &mut buf);
-                optional_thing(&stat.body, &mut buf)
+                handle_optional_node(&stat.guard, &mut buf);
+                handle_optional_node(&stat.body, &mut buf)
             }
 
             Node::Irange(stat) => {
-                optional_thing(&stat.left, &mut buf);
-                optional_thing(&stat.right, &mut buf);
+                handle_optional_node(&stat.left, &mut buf);
+                handle_optional_node(&stat.right, &mut buf);
             }
 
             // TODO: do we want to keep track of instance varaibles?? seems like it is isn't necessary
@@ -197,11 +197,11 @@ pub fn create_method_details(
             Node::Ivasgn(stat) => {
                 instance_varaibles.insert(stat.name);
 
-                optional_thing(&stat.value, &mut buf)
+                handle_optional_node(&stat.value, &mut buf)
             }
 
-            Node::Kwargs(stat) => search_for_param_in_list(stat.pairs, &mut buf),
-            Node::KwBegin(stat) => search_for_param_in_list(stat.statements, &mut buf),
+            Node::Kwargs(stat) => handle_vector_of_nodes(stat.pairs, &mut buf),
+            Node::KwBegin(stat) => handle_vector_of_nodes(stat.statements, &mut buf),
             Node::Kwoptarg(stat) => buf.push_back(stat.default),
             Node::Kwsplat(stat) => buf.push_back(stat.value),
 
@@ -230,7 +230,7 @@ pub fn create_method_details(
                     0
                 };
                 local_varaibles.insert(stat.name, v);
-                optional_thing(&stat.value, &mut buf)
+                handle_optional_node(&stat.value, &mut buf)
             }
 
             Node::Masgn(stat) => {
@@ -251,15 +251,15 @@ pub fn create_method_details(
                 buf.push_back(stat.value);
                 buf.push_back(stat.pattern)
             }
-            Node::MatchRest(stat) => optional_thing(&stat.name, &mut buf),
+            Node::MatchRest(stat) => handle_optional_node(&stat.name, &mut buf),
             Node::MatchWithLvasgn(stat) => {
                 buf.push_back(stat.re);
                 buf.push_back(stat.value)
             }
 
-            Node::Mlhs(stat) => search_for_param_in_list(stat.items, &mut buf),
+            Node::Mlhs(stat) => handle_vector_of_nodes(stat.items, &mut buf),
 
-            Node::Next(stat) => search_for_param_in_list(stat.args, &mut buf),
+            Node::Next(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
             Node::Numblock(stat) => buf.push_back(stat.body),
 
@@ -285,27 +285,27 @@ pub fn create_method_details(
 
             Node::Pin(stat) => buf.push_back(stat.var),
 
-            Node::Postexe(stat) => optional_thing(&stat.body, &mut buf),
-            Node::Preexe(stat) => optional_thing(&stat.body, &mut buf),
-            Node::Procarg0(stat) => search_for_param_in_list(stat.args, &mut buf),
+            Node::Postexe(stat) => handle_optional_node(&stat.body, &mut buf),
+            Node::Preexe(stat) => handle_optional_node(&stat.body, &mut buf),
+            Node::Procarg0(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
             Node::Regexp(stat) => {
-                search_for_param_in_list(stat.parts, &mut buf);
-                optional_thing(&stat.options, &mut buf)
+                handle_vector_of_nodes(stat.parts, &mut buf);
+                handle_optional_node(&stat.options, &mut buf)
             }
 
             Node::Rescue(stat) => {
-                search_for_param_in_list(stat.rescue_bodies, &mut buf);
-                optional_thing(&stat.else_, &mut buf);
-                optional_thing(&stat.else_, &mut buf)
+                handle_vector_of_nodes(stat.rescue_bodies, &mut buf);
+                handle_optional_node(&stat.else_, &mut buf);
+                handle_optional_node(&stat.else_, &mut buf)
             }
             Node::RescueBody(stat) => {
-                optional_thing(&stat.body, &mut buf);
-                optional_thing(&stat.exc_var, &mut buf);
-                optional_thing(&stat.exc_list, &mut buf)
+                handle_optional_node(&stat.body, &mut buf);
+                handle_optional_node(&stat.exc_var, &mut buf);
+                handle_optional_node(&stat.exc_list, &mut buf)
             }
 
-            Node::Return(stat) => search_for_param_in_list(stat.args, &mut buf),
+            Node::Return(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
             Node::Send(stat) => {
                 match parse_send(stat.clone()) {
@@ -314,19 +314,19 @@ pub fn create_method_details(
                     SendTypes::ParamsRequirePermit => {}
                     _ => {
                         // method_calls.insert(stat.method_name);
-                        search_for_param_in_list(stat.args, &mut buf);
-                        optional_thing(&stat.recv, &mut buf)
+                        handle_vector_of_nodes(stat.args, &mut buf);
+                        handle_optional_node(&stat.recv, &mut buf)
                     }
                 }
             }
 
-            Node::Splat(stat) => optional_thing(&stat.value, &mut buf),
+            Node::Splat(stat) => handle_optional_node(&stat.value, &mut buf),
 
-            Node::Undef(stat) => search_for_param_in_list(stat.names, &mut buf),
+            Node::Undef(stat) => handle_vector_of_nodes(stat.names, &mut buf),
             Node::UnlessGuard(stat) => buf.push_back(stat.cond),
             Node::Until(stat) => {
                 buf.push_back(stat.cond);
-                optional_thing(&stat.body, &mut buf);
+                handle_optional_node(&stat.body, &mut buf);
             }
             Node::UntilPost(stat) => {
                 buf.push_back(stat.cond);
@@ -334,20 +334,20 @@ pub fn create_method_details(
             }
 
             Node::When(stat) => {
-                search_for_param_in_list(stat.patterns, &mut buf);
-                optional_thing(&stat.body, &mut buf)
+                handle_vector_of_nodes(stat.patterns, &mut buf);
+                handle_optional_node(&stat.body, &mut buf)
             }
 
             Node::While(stat) => {
                 buf.push_back(stat.cond);
-                optional_thing(&stat.body, &mut buf)
+                handle_optional_node(&stat.body, &mut buf)
             }
             Node::WhilePost(stat) => {
                 buf.push_back(stat.cond);
                 buf.push_back(stat.body)
             }
 
-            Node::Yield(stat) => search_for_param_in_list(stat.args, &mut buf),
+            Node::Yield(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
             _ => {}
         }
@@ -374,7 +374,6 @@ fn parse_send(stat: nodes::Send) -> SendTypes {
     let mut permit = false;
     let mut params = false;
     if let Some(temp) = stat.recv {
-        println!("method_name: {}", stat.method_name);
         if stat.method_name == "require" {
             require = true;
         } else if stat.method_name == "permit" {
