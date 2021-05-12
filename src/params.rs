@@ -1,3 +1,5 @@
+use super::types::{MethodDetails};
+
 use crate::utils::{self, parse_node_str, parse_optional_name};
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -11,21 +13,6 @@ enum SendTypes {
     ParamsRequire,
     ParamsRequirePermit,
     Invalid,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct MethodDetails {
-    pub name: String,
-    pub args: Vec<String>,
-    pub params: HashSet<String>,
-    pub headers: Vec<(String, String)>, // TODO: need to implement this one
-
-    pub instance_varaibles: HashSet<String>, // implemented
-    pub local_varaibles: HashMap<String, usize>, // implemented
-
-    // method name and method indexes
-    pub method_calls: Vec<(String, Vec<String>)>, // is nearly done
-    pub renders: Vec<String>,                     // TODO: implement this one
 }
 
 impl std::fmt::Display for MethodDetails {

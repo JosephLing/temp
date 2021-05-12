@@ -1,3 +1,10 @@
+mod params;
+mod routes;
+mod utils;
+mod types;
+
+use types::{MethodDetails, Controller, HelperModule, Concern, AppData};
+
 use std::{
     collections::{HashMap, VecDeque},
     fs,
@@ -6,37 +13,10 @@ use std::{
 
 use lib_ruby_parser::{nodes::Class, Node, Parser};
 
-use params::{create_method_details, MethodDetails};
 use utils::{get_node_name, parse_name, parse_superclass};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::routes::parse_routes;
-
-mod params;
-mod routes;
-mod utils;
-#[derive(Debug)]
-struct Controller {
-    pub name: String,
-    pub parent: String,
-    pub methods: Vec<MethodDetails>,
-    pub actions: Vec<String>,
-    pub include: Vec<String>,
-    pub module: Option<String>,
-    // ignoring requires for now
-}
-
-#[derive(Debug)]
-struct HelperModule {
-    pub name: String,
-    pub methods: Vec<MethodDetails>,
-}
-#[derive(Debug)]
-struct Concern {
-    pub name: String,
-    pub methods: Vec<MethodDetails>,
-    pub actions: Vec<String>, // TODO: work out what this looks like
-}
 
 #[derive(Debug)]
 enum File {
@@ -74,12 +54,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
     } else if superclass != "StandardError" {
         if let Some(body) = class.body {
             let mut methods = Vec::new();
-            // methods
             match *body {
-                /*
-                    def foo
-                    end
-                */
                 // def and defs .name and we need to consider the argument names it takes.... but I haven't thought about args
                 Node::Def(stat) => {
                     get_method_details_from_optional(stat.body, stat.name, &mut methods);
@@ -335,11 +310,12 @@ fn parse_files(
     Ok(())
 }
 
-pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: abstract these out so unit tests can written... ah more work but will help
-    let mut concerns: HashMap<String, Concern> = HashMap::new();
-    let mut helper: HashMap<String, HelperModule> = HashMap::new();
-    let mut controller: HashMap<String, Controller> = HashMap::new();
+pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
+    let mut app_data = AppData {
+        concerns: HashMap::new(),
+        helpers: HashMap::new(),
+        controllers: HashMap::new(),
+    };
 
     let mut route_path = root.clone();
     route_path.push("config");
@@ -355,8 +331,8 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let mut app_dir = root.clone();
     app_dir.push("app");
 
-    let mut helper_path = app_dir.clone();
-    helper_path.push("helpers");
+    let mut helpers_path = app_dir.clone();
+    helpers_path.push("helpers");
 
     let mut controllers_path = app_dir.clone();
 
@@ -364,37 +340,18 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
 
     parse_files(
         &controllers_path,
-        &mut controller,
-        &mut concerns,
-        &mut helper,
+        &mut app_data.controllers,
+        &mut app_data.concerns,
+        &mut app_data.helpers,
     )?;
-    parse_files(&helper_path, &mut controller, &mut concerns, &mut helper)?;
+    parse_files(
+        &helpers_path,
+        &mut app_data.controllers,
+        &mut app_data.concerns,
+        &mut app_data.helpers,
+    )?;
 
-    println!("--- Controllers ---");
-    for (_, con) in controller {
-        println!("[{:?}] {} < {}", con.module, con.name, con.parent);
-        for method in con.methods {
-            println!("{}", method);
-        }
-    }
-
-    println!("--- Helpers ---");
-    for (_, hel) in helper {
-        println!("{}", hel.name);
-        for method in hel.methods {
-            println!("{}", method);
-        }
-    }
-
-    println!("--- Concerns ---");
-    for (_, con) in concerns {
-        println!("{}", con.name);
-        for method in con.methods {
-            println!("{}", method);
-        }
-    }
-
-    Ok(())
+    Ok(app_data)
 }
 
 #[cfg(test)]
