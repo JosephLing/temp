@@ -375,6 +375,7 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         println!("[{:?}] {} < {}", con.module, con.name, con.parent);
         for method in con.methods {
             println!("# {}", method.name);
+            println!("# \t{:?}", method.method_calls)
         }
     }
 
@@ -383,6 +384,8 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", hel.name);
         for method in hel.methods {
             println!("# {}", method.name);
+            println!("# \t{:?}", method.method_calls)
+
         }
     }
 
@@ -391,6 +394,7 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", con.name);
         for method in con.methods {
             println!("# {}", method.name);
+            println!("# \t{:?}", method.method_calls)
         }
     }
 
