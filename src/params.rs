@@ -28,6 +28,37 @@ pub struct MethodDetails {
     pub renders: Vec<String>,           // TODO: implement this one
 }
 
+
+impl std::fmt::Display for MethodDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "# {} ", self.name)?;
+        if !self.args.is_empty(){
+            write!(f, "args: {:?}", self.args)?;
+        }
+        if !self.params.is_empty(){
+            write!(f, "\n\tparams: {:?}", self.params)?;
+        }
+        if !self.headers.is_empty(){
+            write!(f, "\n\theaders: {:?}", self.headers)?;
+        }
+        if !self.instance_varaibles.is_empty(){
+            write!(f, "\n\tinstance vars: {:?}", self.instance_varaibles)?;
+        }
+        if !self.local_varaibles.is_empty(){
+            write!(f, "\n\tlocal vars: {:?}", self.local_varaibles)?;
+        }
+        if !self.method_calls.is_empty(){
+            write!(f, "\n\tmethod_calls: {}", self.method_calls.iter().map(|x| format!("{}({}),", x.0, x.1.join(","))).collect::<String>())?;
+        }
+
+        if !self.renders.is_empty(){
+            write!(f, "\n\trender {:?}", self.renders)?;
+        }
+
+        Ok(())
+    }
+}
+
 fn handle_vector_of_nodes(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
     for stat in &statements {
         buf.push_back(Box::new(stat.clone()));
