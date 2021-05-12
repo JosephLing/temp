@@ -18,6 +18,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("--- Controllers ---");
     for (_, con) in &app_data.controllers {
         println!("[{:?}] {} < {}", con.module, con.name, con.parent);
+        for include in &con.include{
+            println!("\tinclude {}", include);
+        }
         for method in &con.get_own_methods() {
             println!("- {}", method);
         }

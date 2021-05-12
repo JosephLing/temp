@@ -54,6 +54,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
     } else if superclass != "StandardError" {
         if let Some(body) = class.body {
             let mut methods = Vec::new();
+            let mut includes = Vec::new();
             match *body {
                 // def and defs .name and we need to consider the argument names it takes.... but I haven't thought about args
                 Node::Def(stat) => {
@@ -70,7 +71,11 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                 "before_action" => {}
                                 "around_action" => {}
                                 "require" => {}
-                                "include" => {}
+                                "include" => {
+                                    for arg in &send_thing.args{
+                                        includes.push(utils::parse_node_str(arg));
+                                    }
+                                }
                                 "private" => {}
                                 "protected" => {}
                                 "rescue_from" => {}
@@ -115,7 +120,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                 parent: superclass,
                 methods,
                 actions: Vec::new(),
-                include: Vec::new(),
+                include: includes,
                 module: if module.is_empty() {
                     None
                 } else {
