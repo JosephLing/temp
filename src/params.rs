@@ -25,33 +25,39 @@ pub struct MethodDetails {
 
     // method name and method indexes
     pub method_calls: Vec<(String, Vec<String>)>, // is nearly done
-    pub renders: Vec<String>,           // TODO: implement this one
+    pub renders: Vec<String>,                     // TODO: implement this one
 }
-
 
 impl std::fmt::Display for MethodDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "# {} ", self.name)?;
-        if !self.args.is_empty(){
+        if !self.args.is_empty() {
             write!(f, "args: {:?}", self.args)?;
         }
-        if !self.params.is_empty(){
+        if !self.params.is_empty() {
             write!(f, "\n\tparams: {:?}", self.params)?;
         }
-        if !self.headers.is_empty(){
+        if !self.headers.is_empty() {
             write!(f, "\n\theaders: {:?}", self.headers)?;
         }
-        if !self.instance_varaibles.is_empty(){
+        if !self.instance_varaibles.is_empty() {
             write!(f, "\n\tinstance vars: {:?}", self.instance_varaibles)?;
         }
-        if !self.local_varaibles.is_empty(){
+        if !self.local_varaibles.is_empty() {
             write!(f, "\n\tlocal vars: {:?}", self.local_varaibles)?;
         }
-        if !self.method_calls.is_empty(){
-            write!(f, "\n\tmethod_calls: {}", self.method_calls.iter().map(|x| format!("{}({}),", x.0, x.1.join(","))).collect::<String>())?;
+        if !self.method_calls.is_empty() {
+            write!(
+                f,
+                "\n\tmethod_calls: {}",
+                self.method_calls
+                    .iter()
+                    .map(|x| format!("{}({}),", x.0, x.1.join(",")))
+                    .collect::<String>()
+            )?;
         }
 
-        if !self.renders.is_empty(){
+        if !self.renders.is_empty() {
             write!(f, "\n\trender {:?}", self.renders)?;
         }
 
@@ -79,8 +85,44 @@ pub fn create_method_details(
     args: Vec<String>,
 ) -> MethodDetails {
     let invalid_method_names = vec![
-        "==", ">", "!=", "<", "+", "-", "*", "%", "where", "find", "find_by", "count", "size","limit",
-        "reduce", "map", "filter","first", "last", "empty?", "reject", "in?", "include?", "is_a?", "is_s?",
+        "==",
+        ">",
+        "!=",
+        "<",
+        "+",
+        "-",
+        "*",
+        "%",
+        "where",
+        "find",
+        "find_by",
+        "count",
+        "size",
+        "limit",
+        "reduce",
+        "map",
+        "filter",
+        "first",
+        "last",
+        "empty?",
+        "reject",
+        "in?",
+        "include?",
+        "is_a?",
+        "is_s?",
+        "select",
+        "length",
+        "join",
+        "nil?",
+        "to_s",
+        "joins",
+        "!",
+        "none?",
+        "to_i",
+        "<<",
+        "split",
+        "starts_with",
+        "logger",
     ];
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();
@@ -343,16 +385,38 @@ pub fn create_method_details(
             Node::Return(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
             Node::Send(stat) => match parse_send(stat.clone()) {
-                SendTypes::ParamsPermit => {}
-                SendTypes::ParamsRequire => {}
-                SendTypes::ParamsRequirePermit => {}
+                SendTypes::ParamsPermit => {
+                    for value in stat.args {
+                        params.insert(utils::parse_node_str(&value));
+                    }
+                }
+                SendTypes::ParamsRequire => {
+                    for value in stat.args {
+                        params.insert(utils::parse_node_str(&value));
+                    }
+                }
+                SendTypes::ParamsRequirePermit => {
+                    for value in stat.args {
+                        params.insert(utils::parse_node_str(&value));
+                    }
+                    if let Some(foo) = stat.recv {
+                        if let Node::Send(stat) = *foo {
+                            for value in stat.args {
+                                params.insert(utils::parse_node_str(&value));
+                            }
+                        }
+                    }
+                }
                 _ => {
-                    if stat.method_name == "render"{
+                    if stat.method_name == "render" {
                         renders.push(stat.args.iter().map(|x| utils::parse_node_str(x)).collect())
-                    }else if !invalid_method_names.iter().any(|x|x == &stat.method_name){
+                    } else if !invalid_method_names.iter().any(|x| x == &stat.method_name) {
                         // we don't need to store every method call, specailly when even `1 == 1` is a method call as such....
                         // args parsing is v. bare bones atm
-                        method_calls.push((stat.method_name, stat.args.iter().map(|x| utils::parse_node_str(x)).collect()));
+                        method_calls.push((
+                            stat.method_name,
+                            stat.args.iter().map(|x| utils::parse_node_str(x)).collect(),
+                        ));
                     }
                     handle_vector_of_nodes(stat.args, &mut buf);
                     handle_optional_node(&stat.recv, &mut buf)
@@ -552,8 +616,6 @@ mod params_tests {
         return format!("{:?}", results);
     }
 
-   
-
     #[test]
     fn send_method() {
         assert_eq!(param_helper("render 'show'"), "");
@@ -606,7 +668,7 @@ mod params_tests {
     fn params_permit_in_array() {
         assert_eq!(
             param_helper("event_type = params.permit([:pizza])"),
-            "pizza"
+            "[pizza]"
         );
     }
 
@@ -614,7 +676,7 @@ mod params_tests {
     fn params_permit_array_type() {
         assert_eq!(
             param_helper("event_type = params.permit(:pizza => [])"),
-            "pizza[]"
+            "pizza=>[]"
         );
     }
 
@@ -622,15 +684,15 @@ mod params_tests {
     fn params_permit_object_type() {
         assert_eq!(
             param_helper("event_type = params.permit(:pizza => {})"),
-            "pizza{}"
+            "pizza=>{}"
         );
     }
 
     #[test]
     fn params_permit_complex() {
         assert_eq!(
-            param_helper("event_type = params.permit(:pizza => [], :dog => {}, :foobar)"),
-            "pizza[], dog{}, foobar"
+            param_helper("event_type = params.permit(:pizza => [], :sword => {})"),
+            "pizza=>[],sword=>{}"
         );
     }
 
@@ -638,7 +700,7 @@ mod params_tests {
     fn params_require_permit() {
         assert_eq!(
             param_helper("event_type = params.require(:issue_event_type_name).permit(:dogs)"),
-            "issue_event_type_name, dogs"
+            "dogs, issue_event_type_name"
         );
     }
 
@@ -699,8 +761,8 @@ mod params_tests {
     //         "[(\"hello\", \"20\")]"
     //     );
     // }
-    
-    mod method_call{
+
+    mod method_call {
         use super::*;
         use pretty_assertions::assert_eq;
 
@@ -712,44 +774,40 @@ mod params_tests {
                 .into_iter()
                 .collect::<Vec<(String, Vec<String>)>>();
             // results.sort();
-            results.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
-            return results.iter().map(|x| format!("{}({})", x.0, x.1.join(","))).collect();
+            results.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            return results
+                .iter()
+                .map(|x| format!("{}({})", x.0, x.1.join(",")))
+                .collect();
         }
         #[test]
         fn method_call_single_argument() {
-            assert_eq!(
-                method_call_helper("foo(1)"),
-                "foo(1)"
-            );
+            assert_eq!(method_call_helper("foo(1)"), "foo(1)");
         }
 
         #[test]
         fn method_call_no_args() {
-            assert_eq!(
-                method_call_helper("foo()"),
-                "foo()"
-            );
+            assert_eq!(method_call_helper("foo()"), "foo()");
         }
 
         #[test]
         fn method_call_multi_args() {
-            assert_eq!(
-                method_call_helper("foo(1,2,3)"),
-                "foo(1,2,3)"
-            );
+            assert_eq!(method_call_helper("foo(1,2,3)"), "foo(1,2,3)");
         }
 
         #[test]
         fn method_call_mix() {
             assert_eq!(
-                method_call_helper("
+                method_call_helper(
+                    "
                 foo(1,2,3)
                 bar(:id)
-                "),
+                "
+                ),
                 "bar(id)foo(1,2,3)"
             );
         }
-    
+
         #[test]
         fn method_call_not_render_for_json() {
             assert_eq!(method_call_helper("render json: foo"), "foo()");

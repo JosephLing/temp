@@ -173,7 +173,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                     name: module_name.clone(),
                     methods,
                 }))
-            },
+            }
             Node::Defs(stat) => {
                 let mut methods = Vec::new();
                 get_method_details_from_optional(stat.body, stat.name, &mut methods);
@@ -181,7 +181,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                     name: module_name.clone(),
                     methods,
                 }))
-            },
+            }
             Node::Class(class) => files.push(parse_class(class, module_name.clone())?),
             Node::Begin(begin) => {
                 let mut helper_found = false;
