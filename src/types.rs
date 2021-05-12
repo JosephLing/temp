@@ -45,3 +45,22 @@ pub struct AppData {
     pub helpers: HashMap<String, HelperModule>,
     pub controllers: HashMap<String, Controller>,
 }
+
+impl Controller {
+    pub fn get_own_methods(&self) -> Vec<MethodDetails> {
+        return self.methods.clone();
+    }
+
+    pub fn get_inherited_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
+        match app_data.controllers.get(&self.parent) {
+            Some(parent_controller) => parent_controller.get_all_methods(app_data),
+            None => Vec::new(),
+        }
+    }
+
+    pub fn get_all_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
+        let mut methods = self.get_own_methods();
+        methods.append(&mut self.get_inherited_methods(app_data));
+        return methods;
+    }
+}

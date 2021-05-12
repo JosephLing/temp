@@ -16,27 +16,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_data = compute(&cmd.root)?;
 
     println!("--- Controllers ---");
-    for (_, con) in app_data.controllers {
+    for (_, con) in &app_data.controllers {
         println!("[{:?}] {} < {}", con.module, con.name, con.parent);
-        for method in con.methods {
-            println!("{}", method);
+        for method in &con.get_own_methods() {
+            println!("- {}", method);
         }
+        for method in &con.get_inherited_methods(&app_data) {
+            println!("+ {}", method);
+        }
+        println!();
     }
 
     println!("--- Helpers ---");
-    for (_, hel) in app_data.helpers {
+    for (_, hel) in &app_data.helpers {
         println!("{}", hel.name);
-        for method in hel.methods {
+        for method in &hel.methods {
             println!("{}", method);
         }
     }
 
     println!("--- Concerns ---");
-    for (_, con) in app_data.concerns {
+    for (_, con) in &app_data.concerns {
         println!("{}", con.name);
-        for method in con.methods {
+        for method in &con.methods {
             println!("{}", method);
         }
     }
+
     Ok(())
 }
