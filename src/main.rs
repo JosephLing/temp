@@ -21,6 +21,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for include in &con.include{
             println!("\tinclude {}", include);
         }
+        for (kind, action) in &con.actions{
+            println!("\t {:?} {}", kind, action);
+        }
         for method in &con.get_own_methods() {
             println!("- {}", method);
         }

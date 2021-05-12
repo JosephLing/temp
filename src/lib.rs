@@ -3,7 +3,7 @@ mod routes;
 mod types;
 mod utils;
 
-use types::{AppData, Concern, Controller, HelperModule, MethodDetails};
+use types::{ActionKinds, AppData, Concern, Controller, HelperModule, MethodDetails};
 
 use std::{
     collections::{HashMap, VecDeque},
@@ -55,6 +55,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
         if let Some(body) = class.body {
             let mut methods = Vec::new();
             let mut includes = Vec::new();
+            let mut actions = Vec::new();
             match *body {
                 // def and defs .name and we need to consider the argument names it takes.... but I haven't thought about args
                 Node::Def(stat) => {
@@ -68,8 +69,16 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                     for stat in stat.statements {
                         match stat {
                             Node::Send(send_thing) => match send_thing.method_name.as_str() {
-                                "before_action" => {}
-                                "around_action" => {}
+                                "before_action" => {
+                                    for arg in &send_thing.args{
+                                        actions.push((ActionKinds::BeforeAction, utils::parse_node_str(arg)));
+                                    }
+                                }
+                                "around_action" => {
+                                    for arg in &send_thing.args{
+                                        actions.push((ActionKinds::AroundAction, utils::parse_node_str(arg)));
+                                    }
+                                }
                                 "require" => {}
                                 "include" => {
                                     for arg in &send_thing.args{
@@ -78,14 +87,15 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                 }
                                 "private" => {}
                                 "protected" => {}
-                                "rescue_from" => {}
-                                "skip_before_action" => {}
-                                "skip_auth_methods" => {}
+                                "rescue_from" => {
+                                    for arg in &send_thing.args{
+                                        actions.push((ActionKinds::RescueFrom, utils::parse_node_str(arg)));
+                                    }
+                                }
                                 _ => {
-                                    panic!(format!(
-                                        "unknown action or include thing: {}",
-                                        send_thing.method_name
-                                    ));
+                                    for arg in &send_thing.args{
+                                        actions.push((ActionKinds::Custom(send_thing.method_name.clone()), utils::parse_node_str(arg)));
+                                    }
                                 }
                             },
                             Node::Def(stat) => {
@@ -119,7 +129,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                 name,
                 parent: superclass,
                 methods,
-                actions: Vec::new(),
+                actions,
                 include: includes,
                 module: if module.is_empty() {
                     None

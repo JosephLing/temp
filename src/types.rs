@@ -14,13 +14,20 @@ pub struct MethodDetails {
     pub method_calls: Vec<(String, Vec<String>)>, // is nearly done
     pub renders: Vec<String>,                     // TODO: implement this one
 }
+#[derive(Debug)]
+pub enum ActionKinds{
+    BeforeAction,
+    AroundAction,
+    RescueFrom,
+    Custom(String)
+}
 
 #[derive(Debug)]
 pub struct Controller {
     pub name: String,
     pub parent: String,
     pub methods: Vec<MethodDetails>,
-    pub actions: Vec<String>,
+    pub actions: Vec<(ActionKinds, String)>,
     pub include: Vec<String>,
     pub module: Option<String>,
     // ignoring requires for now
