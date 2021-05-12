@@ -25,7 +25,7 @@ pub struct MethodDetails {
 
     // method name and method indexes
     pub method_calls: Vec<(String, Vec<String>)>, // is nearly done
-    pub renders: Vec<(String, String)>,           // TODO: implement this one
+    pub renders: Vec<String>,           // TODO: implement this one
 }
 
 fn handle_vector_of_nodes(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
@@ -47,12 +47,16 @@ pub fn create_method_details(
     method_name: String,
     args: Vec<String>,
 ) -> MethodDetails {
+    let invalid_method_names = vec![
+        "==", ">", "!=", "<", "+", "-", "*", "%", "where", "find", "find_by", "count", "size","limit",
+        "reduce", "map", "filter","first", "last", "empty?", "reject", "in?", "include?", "is_a?", "is_s?",
+    ];
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();
     let mut instance_varaibles: HashSet<String> = HashSet::new();
     let mut method_calls: Vec<(String, Vec<String>)> = Vec::new();
     let mut local_varaibles: HashMap<String, usize> = HashMap::new();
-    let renders: Vec<(String, String)> = Vec::new();
+    let mut renders: Vec<String> = Vec::new();
 
     let mut buf = VecDeque::new();
 
@@ -307,18 +311,22 @@ pub fn create_method_details(
 
             Node::Return(stat) => handle_vector_of_nodes(stat.args, &mut buf),
 
-            Node::Send(stat) => {
-                match parse_send(stat.clone()) {
-                    SendTypes::ParamsPermit => {}
-                    SendTypes::ParamsRequire => {}
-                    SendTypes::ParamsRequirePermit => {}
-                    _ => {
-                        // method_calls.insert(stat.method_name);
-                        handle_vector_of_nodes(stat.args, &mut buf);
-                        handle_optional_node(&stat.recv, &mut buf)
+            Node::Send(stat) => match parse_send(stat.clone()) {
+                SendTypes::ParamsPermit => {}
+                SendTypes::ParamsRequire => {}
+                SendTypes::ParamsRequirePermit => {}
+                _ => {
+                    if stat.method_name == "render"{
+                        renders.push(stat.args.iter().map(|x| utils::parse_node_str(x)).collect())
+                    }else if !invalid_method_names.iter().any(|x|x == &stat.method_name){
+                        // we don't need to store every method call, specailly when even `1 == 1` is a method call as such....
+                        // args parsing is v. bare bones atm
+                        method_calls.push((stat.method_name, stat.args.iter().map(|x| utils::parse_node_str(x)).collect()));
                     }
+                    handle_vector_of_nodes(stat.args, &mut buf);
+                    handle_optional_node(&stat.recv, &mut buf)
                 }
-            }
+            },
 
             Node::Splat(stat) => handle_optional_node(&stat.value, &mut buf),
 
@@ -513,17 +521,7 @@ mod params_tests {
         return format!("{:?}", results);
     }
 
-    fn method_call_helper(input: &str) -> String {
-        // let temp = helper(input);
-        // // println!("{:#?}", *temp);
-        // let mut results = search_for_param(temp)
-        //     .method_calls
-        //     .into_iter()
-        //     .collect::<Vec<String>>();
-        // results.sort();
-        // return results.join(", ");
-        return "".to_string();
-    }
+   
 
     #[test]
     fn send_method() {
@@ -670,18 +668,66 @@ mod params_tests {
     //         "[(\"hello\", \"20\")]"
     //     );
     // }
+    
+    mod method_call{
+        use super::*;
+        use pretty_assertions::assert_eq;
 
-    #[test]
-    fn method_call() {
-        assert_eq!(
-            method_call_helper("process_jwt cookie"),
-            "cookie, process_jwt"
-        );
-    }
+        fn method_call_helper(input: &str) -> String {
+            let temp = helper(input);
+            // println!("{:#?}", *temp);
+            let mut results = create_method_details(temp, "".to_string(), Vec::new())
+                .method_calls
+                .into_iter()
+                .collect::<Vec<(String, Vec<String>)>>();
+            // results.sort();
+            results.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
+            return results.iter().map(|x| format!("{}({})", x.0, x.1.join(","))).collect();
+        }
+        #[test]
+        fn method_call_single_argument() {
+            assert_eq!(
+                method_call_helper("foo(1)"),
+                "foo(1)"
+            );
+        }
 
-    #[test]
-    fn method_call_not_render() {
-        assert_eq!(method_call_helper("render json: foo"), "");
+        #[test]
+        fn method_call_no_args() {
+            assert_eq!(
+                method_call_helper("foo()"),
+                "foo()"
+            );
+        }
+
+        #[test]
+        fn method_call_multi_args() {
+            assert_eq!(
+                method_call_helper("foo(1,2,3)"),
+                "foo(1,2,3)"
+            );
+        }
+
+        #[test]
+        fn method_call_mix() {
+            assert_eq!(
+                method_call_helper("
+                foo(1,2,3)
+                bar(:id)
+                "),
+                "bar(id)foo(1,2,3)"
+            );
+        }
+    
+        #[test]
+        fn method_call_not_render_for_json() {
+            assert_eq!(method_call_helper("render json: foo"), "foo()");
+        }
+
+        #[test]
+        fn method_call_not_render_for_template() {
+            assert_eq!(method_call_helper("render 'show'"), "");
+        }
     }
 
     #[test]
