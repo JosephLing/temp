@@ -34,7 +34,7 @@ struct HelperModule {
 #[derive(Debug)]
 struct Concern {
     pub name: String,
-    pub methods: HashMap<String, MethodDetails>,
+    pub methods: Vec<MethodDetails>,
     pub actions: Vec<String>, // TODO: work out what this looks like
 }
 
@@ -166,17 +166,27 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                 }
                 module_names.push_back(module_name.clone() + &parse_name(module.name));
             }
-            Node::Def(_def) => files.push(File::Module(HelperModule {
-                name: module_name.clone(),
-                methods: Vec::new(),
-            })),
-            Node::Defs(_def) => files.push(File::Module(HelperModule {
-                name: module_name.clone(),
-                methods: Vec::new(),
-            })),
+            Node::Def(stat) => {
+                let mut methods = Vec::new();
+                get_method_details_from_optional(stat.body, stat.name, &mut methods);
+                files.push(File::Module(HelperModule {
+                    name: module_name.clone(),
+                    methods,
+                }))
+            },
+            Node::Defs(stat) => {
+                let mut methods = Vec::new();
+                get_method_details_from_optional(stat.body, stat.name, &mut methods);
+                files.push(File::Module(HelperModule {
+                    name: module_name.clone(),
+                    methods,
+                }))
+            },
             Node::Class(class) => files.push(parse_class(class, module_name.clone())?),
             Node::Begin(begin) => {
                 let mut helper_found = false;
+                let mut concern_found = false;
+                let mut methods = Vec::<MethodDetails>::new();
                 for stat in begin.statements {
                     match stat {
                         Node::Module(module) => {
@@ -197,33 +207,30 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                             } else if send.method_name == "private_class_method" {
                                 // do nothing
                             } else if send.method_name == "extend" {
-                                let mut found = false;
                                 for arg in &send.args {
                                     if get_node_name(&arg)? == "ActiveSupport::Concern" {
-                                        files.push(File::Concern(Concern {
-                                            name: module_name.clone(),
-                                            methods: HashMap::new(),
-                                            actions: Vec::new(),
-                                        }));
-                                        found = true;
+                                        concern_found = true;
                                         break;
                                     } else {
                                         return Err("unsupported 'extend' found".to_owned());
                                     }
-                                }
-                                if found {
-                                    break;
                                 }
                             } else {
                                 return Err(format!("unexpected 'send' in file {:?}", send));
                             }
                         }
                         Node::Casgn(_) => {}
-                        Node::Def(_) => {
-                            helper_found = true;
+                        Node::Def(stat) => {
+                            get_method_details_from_optional(stat.body, stat.name, &mut methods);
+                            if !concern_found {
+                                helper_found = true;
+                            }
                         }
-                        Node::Defs(_) => {
-                            helper_found = true;
+                        Node::Defs(stat) => {
+                            get_method_details_from_optional(stat.body, stat.name, &mut methods);
+                            if !concern_found {
+                                helper_found = true;
+                            }
                         }
                         _ => {
                             println!("{:?}", stat);
@@ -236,8 +243,14 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                 if helper_found {
                     files.push(File::Module(HelperModule {
                         name: module_name.clone(),
-                        methods: Vec::new(),
-                    }))
+                        methods: methods,
+                    }));
+                } else if concern_found {
+                    files.push(File::Concern(Concern {
+                        name: module_name.clone(),
+                        methods,
+                        actions: Vec::new(),
+                    }));
                 }
             }
             _ => {
@@ -356,20 +369,29 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         &mut helper,
     )?;
     parse_files(&helper_path, &mut controller, &mut concerns, &mut helper)?;
+
     println!("--- Controllers ---");
-
-    for (_name, con) in controller {
-        println!("{:?} {} {}", con.module, con.name, con.parent)
+    for (_, con) in controller {
+        println!("[{:?}] {} < {}", con.module, con.name, con.parent);
+        for method in con.methods {
+            println!("# {}", method.name);
+        }
     }
-    println!("--- Helpers ---");
 
-    for (name, _con) in helper {
-        println!("{}", name)
+    println!("--- Helpers ---");
+    for (_, hel) in helper {
+        println!("{}", hel.name);
+        for method in hel.methods {
+            println!("# {}", method.name);
+        }
     }
 
     println!("--- Concerns ---");
-    for (name, _con) in concerns {
-        println!("{}", name)
+    for (_, con) in concerns {
+        println!("{}", con.name);
+        for method in con.methods {
+            println!("# {}", method.name);
+        }
     }
 
     Ok(())
