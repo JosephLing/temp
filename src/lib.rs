@@ -1,9 +1,9 @@
 mod params;
 mod routes;
-mod utils;
 mod types;
+mod utils;
 
-use types::{MethodDetails, Controller, HelperModule, Concern, AppData};
+use types::{AppData, Concern, Controller, HelperModule, MethodDetails};
 
 use std::{
     collections::{HashMap, VecDeque},
@@ -66,9 +66,23 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                 Node::Begin(stat) => {
                     for stat in stat.statements {
                         match stat {
-                            Node::Send(send_thing) => {
-                                // before_action or include or private (we can skip this)
-                            }
+                            Node::Send(send_thing) => match send_thing.method_name.as_str() {
+                                "before_action" => {}
+                                "around_action" => {}
+                                "require" => {}
+                                "include" => {}
+                                "private" => {}
+                                "protected" => {}
+                                "rescue_from" => {}
+                                "skip_before_action" => {}
+                                "skip_auth_methods" => {}
+                                _ => {
+                                    panic!(format!(
+                                        "unknown action or include thing: {}",
+                                        send_thing.method_name
+                                    ));
+                                }
+                            },
                             Node::Def(stat) => {
                                 get_method_details_from_optional(
                                     stat.body,
@@ -83,14 +97,17 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                     &mut methods,
                                 );
                             }
+                            Node::Casgn(stat) => {
+                                // END_USER_ALLOWED_SETTINGS
+                            }
                             _ => {
-                                println!("ahhhh {:?}", stat);
+                                panic!("ahhhh {:?}", stat);
                             }
                         }
                     }
                 }
                 _ => {
-                    println!("oh no {:?}", body);
+                    panic!("oh no {:?}", body);
                 }
             }
             Ok(File::Controller(Controller {

@@ -1,4 +1,4 @@
-use super::types::{MethodDetails};
+use super::types::MethodDetails;
 
 use crate::utils::{self, parse_node_str, parse_optional_name};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -223,7 +223,6 @@ pub fn create_method_details(
             Node::IndexAsgn(stat) => {
                 if let Node::Send(send) = *stat.recv {
                     if send.method_name == "headers" {
-                        println!("args {:?}", send.args);
                         for index in stat.indexes {
                             match index {
                                 Node::Str(value) => {
