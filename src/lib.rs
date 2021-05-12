@@ -6,7 +6,7 @@ use std::{
 
 use lib_ruby_parser::{nodes::Class, Node, Parser};
 
-use params::MethodDetails;
+use params::{create_method_details, MethodDetails};
 use utils::{get_node_name, parse_name, parse_superclass};
 use walkdir::{DirEntry, WalkDir};
 
@@ -34,7 +34,7 @@ struct HelperModule {
 #[derive(Debug)]
 struct Concern {
     pub name: String,
-    pub methods: Vec<MethodDetails>,
+    pub methods: HashMap<String, MethodDetails>,
     pub actions: Vec<String>, // TODO: work out what this looks like
 }
 
@@ -54,6 +54,18 @@ fn is_hidden(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
+fn get_method_details_from_optional(
+    optional_args: Option<Box<Node>>,
+    name: String,
+    methods: &mut Vec<MethodDetails>,
+) -> Option<MethodDetails> {
+    if let Some(arg) = optional_args {
+        methods.push(params::create_method_details(arg, name, Vec::new()));
+    }
+
+    None
+}
+
 fn parse_class(class: Class, module: String) -> Result<File, String> {
     let name = parse_name(class.name);
     let superclass = parse_superclass(class.superclass);
@@ -61,21 +73,77 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
         Err("single file classes not supported".to_string())
     } else if superclass != "StandardError" {
         if let Some(body) = class.body {
+            let mut methods = Vec::new();
             // methods
-            params::search_for_param(body);
+            match *body {
+                /*
+                    def foo
+                    end
+                */
+                // def and defs .name and we need to consider the argument names it takes.... but I haven't thought about args
+                Node::Def(stat) => {
+                    get_method_details_from_optional(stat.body, stat.name, &mut methods);
+                }
+                Node::Defs(stat) => {
+                    get_method_details_from_optional(stat.body, stat.name, &mut methods);
+                }
+
+                Node::Begin(stat) => {
+                    for stat in stat.statements {
+                        match stat {
+                            Node::Send(send_thing) => {
+                                // before_action or include or private (we can skip this)
+                            }
+                            Node::Def(stat) => {
+                                get_method_details_from_optional(
+                                    stat.body,
+                                    stat.name,
+                                    &mut methods,
+                                );
+                            }
+                            Node::Defs(stat) => {
+                                get_method_details_from_optional(
+                                    stat.body,
+                                    stat.name,
+                                    &mut methods,
+                                );
+                            }
+                            _ => {
+                                println!("ahhhh {:?}", stat);
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    println!("oh no {:?}", body);
+                }
+            }
+            Ok(File::Controller(Controller {
+                name,
+                parent: superclass,
+                methods,
+                actions: Vec::new(),
+                include: Vec::new(),
+                module: if module.is_empty() {
+                    None
+                } else {
+                    Some(module)
+                },
+            }))
+        } else {
+            Ok(File::Controller(Controller {
+                name,
+                parent: superclass,
+                methods: Vec::new(),
+                actions: Vec::new(),
+                include: Vec::new(),
+                module: if module.is_empty() {
+                    None
+                } else {
+                    Some(module)
+                },
+            }))
         }
-        Ok(File::Controller(Controller {
-            name,
-            parent: superclass,
-            methods: Vec::new(),
-            actions: Vec::new(),
-            include: Vec::new(),
-            module: if module.is_empty() {
-                None
-            } else {
-                Some(module)
-            },
-        }))
     } else {
         Ok(File::None)
     }
@@ -134,7 +202,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                                     if get_node_name(&arg)? == "ActiveSupport::Concern" {
                                         files.push(File::Concern(Concern {
                                             name: module_name.clone(),
-                                            methods: Vec::new(),
+                                            methods: HashMap::new(),
                                             actions: Vec::new(),
                                         }));
                                         found = true;
@@ -305,4 +373,40 @@ pub fn compute(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod parse_class_tests {
+    use lib_ruby_parser::{Node, Parser};
+
+    use crate::parse_class;
+
+    fn helper(input: &str) -> Box<lib_ruby_parser::Node> {
+        Box::new(
+            Parser::new(input.as_bytes(), Default::default())
+                .do_parse()
+                .ast
+                .unwrap(),
+        )
+    }
+    #[test]
+    fn basic() {
+        let input = "
+        class ApplicationController < ActionController::API 
+            include HttpResponses
+
+            before_action :auth_check
+
+            def auth_check
+                return unless params[:auth_token] == 1
+            end
+        end
+        ";
+        if let Node::Class(value) = *helper(input) {
+            println!("{:?}", parse_class(value, "".to_string()));
+
+            // fail to just
+            assert_eq!(false, true);
+        }
+    }
 }

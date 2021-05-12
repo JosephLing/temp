@@ -7,6 +7,7 @@ class PagesController < ApplicationController
 
     def index
         return unless user_details
+        foobar(params)
         json_ok(blog_category.where(page: @page_index).to_json, 200)
     end
 
@@ -14,5 +15,10 @@ class PagesController < ApplicationController
 
     def user_details
         User.find(params[:user_id]).where(page: @page_index)
+    end
+
+    def foobar(details)
+
+        details[:asdfsdf]
     end
 end

@@ -5,20 +5,32 @@ use lib_ruby_parser::{
     nodes::{self, Index},
     Node,
 };
+#[derive(Debug, PartialEq)]
+enum SendTypes {
+    ParamsPermit,
+    ParamsRequire,
+    ParamsRequirePermit,
+    Invalid,
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDetails {
+    pub name: String,
+    pub args: Vec<String>,
     pub params: HashSet<String>,
-    pub headers: Vec<(String, String)>,
-    pub instance_varaibles: HashSet<String>,
-    pub local_varaibles: HashMap<String, usize>,
-    pub method_calls: HashSet<String>,
-    pub renders: Vec<(String, String)>,
+    pub headers: Vec<(String, String)>, // TODO: need to implement this one
+
+    pub instance_varaibles: HashSet<String>, // implemented
+    pub local_varaibles: HashMap<String, usize>, // implemented
+
+    // method name and method indexes
+    pub method_calls: Vec<(String, Vec<String>)>, // is nearly done
+    pub renders: Vec<(String, String)>,           // TODO: implement this one
 }
 
 fn search_for_param_in_list(statements: Vec<Node>, buf: &mut VecDeque<Box<Node>>) {
-    for stat in statements {
-        buf.push_back(Box::new((stat).clone()));
+    for stat in &statements {
+        buf.push_back(Box::new(stat.clone()));
     }
 }
 
@@ -30,11 +42,15 @@ fn optional_thing(body: &Option<Box<Node>>, buf: &mut VecDeque<Box<Node>>) {
 
 // doesn't support inline methods and singleton classes
 // search for: param and headers (ignores payload)
-pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
+pub fn create_method_details(
+    statement: Box<Node>,
+    method_name: String,
+    args: Vec<String>,
+) -> MethodDetails {
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();
     let mut instance_varaibles: HashSet<String> = HashSet::new();
-    let mut method_calls: HashSet<String> = HashSet::new();
+    let mut method_calls: Vec<(String, Vec<String>)> = Vec::new();
     let mut local_varaibles: HashMap<String, usize> = HashMap::new();
     let renders: Vec<(String, String)> = Vec::new();
 
@@ -292,37 +308,15 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
             Node::Return(stat) => search_for_param_in_list(stat.args, &mut buf),
 
             Node::Send(stat) => {
-                // permit -> require -> params
-                // require -> params
-                // permit -> params (permit([...])) hash string to data type
-                // params
-                if let Some(recv) = stat.recv.clone() {
-                    if let Node::Send(send_param) = *recv {
-                        if send_param.method_name == "params" {
-                            for arg in stat.args {
-                                match arg {
-                                    Node::Sym(value) => {
-                                        params.insert(value.name.to_string_lossy());
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        } else if send_param.method_name == "headers" {
-                            println!("{:?}", send_param);
-                        } else {
-                            method_calls.insert(stat.method_name);
-                            search_for_param_in_list(stat.args, &mut buf);
-                            optional_thing(&stat.recv, &mut buf)
-                        }
-                    } else {
-                        method_calls.insert(stat.method_name);
+                match parse_send(stat.clone()) {
+                    SendTypes::ParamsPermit => {}
+                    SendTypes::ParamsRequire => {}
+                    SendTypes::ParamsRequirePermit => {}
+                    _ => {
+                        // method_calls.insert(stat.method_name);
                         search_for_param_in_list(stat.args, &mut buf);
                         optional_thing(&stat.recv, &mut buf)
                     }
-                } else {
-                    method_calls.insert(stat.method_name);
-                    search_for_param_in_list(stat.args, &mut buf);
-                    optional_thing(&stat.recv, &mut buf)
                 }
             }
 
@@ -359,6 +353,8 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
         }
     }
     MethodDetails {
+        name: method_name,
+        args,
         params,
         headers,
         instance_varaibles,
@@ -368,35 +364,67 @@ pub fn search_for_param(statement: Box<Node>) -> MethodDetails {
     }
 }
 
-fn params_send(stat: nodes::Send) {
-    /*
+// track all the information going down about if it is params, require, permit
+// 1. get down to the bottom to find if params is going to be used
+// 2. check whether or not permit and require are in the correct order
+// 3. parse the given indexs
 
-    Allowed:
-    params.require().permit()
+fn parse_send(stat: nodes::Send) -> SendTypes {
+    let mut require = false;
+    let mut permit = false;
+    let mut params = false;
+    if let Some(temp) = stat.recv {
+        println!("method_name: {}", stat.method_name);
+        if stat.method_name == "require" {
+            require = true;
+        } else if stat.method_name == "permit" {
+            permit = true;
+        } else {
+            return SendTypes::Invalid;
+        }
+        let mut buf = VecDeque::new();
+        buf.push_back(*temp);
+        while let Some(temp) = buf.pop_front() {
+            match temp {
+                Node::Send(stat) => {
+                    if stat.method_name == "require" {
+                        if permit {
+                            require = true;
+                        } else {
+                            return SendTypes::Invalid;
+                        }
+                    } else if stat.method_name == "permit" {
+                        if require {
+                            return SendTypes::Invalid;
+                        }
+                        permit = true;
+                    } else if stat.method_name == "params" {
+                        params = true;
+                    } else {
+                        return SendTypes::Invalid;
+                    }
+                    if let Some(recv) = stat.recv {
+                        buf.push_back(*recv);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    if params {
+        if require {
+            if permit {
+                return SendTypes::ParamsRequirePermit;
+            } else {
+                return SendTypes::ParamsRequire;
+            }
+        } else if permit {
+            return SendTypes::ParamsPermit;
+        }
+    }
 
-    params.require()
-
-    paramrs.permit()
-
-    NOT allowed:
-    params.permit().require()
-
-     */
+    SendTypes::Invalid
 }
-
-fn params_permit(stat: Node) {
-    /*
-    params.permit([:opportunity_id, :status => []])
-
-    params.permit(:opportunity_id, :status => [])
-
-    params.permit(:status => {})
-
-    params.permit([:status => {}])
-    */
-}
-
-fn params_require(stat: Node) {}
 
 fn params_index(stat: Index) -> Option<Vec<String>> {
     let mut params_found = false;
@@ -445,10 +473,12 @@ fn params_index(stat: Index) -> Option<Vec<String>> {
 
 #[cfg(test)]
 mod params_tests {
-    use lib_ruby_parser::Parser;
+    use lib_ruby_parser::{Node, Parser};
     use pretty_assertions::assert_eq;
 
-    use super::search_for_param;
+    use crate::params::{parse_send, SendTypes};
+
+    use super::create_method_details;
 
     fn helper(input: &str) -> Box<lib_ruby_parser::Node> {
         Box::new(
@@ -459,12 +489,16 @@ mod params_tests {
         )
     }
     fn param_helper(input: &str) -> String {
-        let mut results = search_for_param(Box::new(
-            Parser::new(input.as_bytes(), Default::default())
-                .do_parse()
-                .ast
-                .unwrap(),
-        ))
+        let mut results = create_method_details(
+            Box::new(
+                Parser::new(input.as_bytes(), Default::default())
+                    .do_parse()
+                    .ast
+                    .unwrap(),
+            ),
+            "tasdf".to_string(),
+            Vec::new(),
+        )
         .params
         .into_iter()
         .collect::<Vec<String>>();
@@ -475,20 +509,21 @@ mod params_tests {
     fn header_helper(input: &str) -> String {
         let temp = helper(input);
         // println!("{:#?}", *temp);
-        let mut results = search_for_param(temp).headers;
+        let mut results = create_method_details(temp, "".to_string(), Vec::new()).headers;
         results.sort();
         return format!("{:?}", results);
     }
 
     fn method_call_helper(input: &str) -> String {
-        let temp = helper(input);
-        // println!("{:#?}", *temp);
-        let mut results = search_for_param(temp)
-            .method_calls
-            .into_iter()
-            .collect::<Vec<String>>();
-        results.sort();
-        return results.join(", ");
+        // let temp = helper(input);
+        // // println!("{:#?}", *temp);
+        // let mut results = search_for_param(temp)
+        //     .method_calls
+        //     .into_iter()
+        //     .collect::<Vec<String>>();
+        // results.sort();
+        // return results.join(", ");
+        return "".to_string();
     }
 
     #[test]
@@ -660,11 +695,47 @@ mod params_tests {
         ";
         let temp = helper(input);
         // println!("{:#?}", *temp);
-        let results = search_for_param(temp).local_varaibles;
+        let results = create_method_details(temp, "".to_string(), Vec::new()).local_varaibles;
 
         assert_eq!(results.get("a"), Some(&0));
         assert_eq!(results.get("b"), None);
         assert_eq!(results.get("c"), Some(&1));
+    }
+    mod param_send_type {
+        use super::*;
+        use pretty_assertions::assert_eq;
+
+        fn send_helper_tester(input: &str, check: SendTypes) {
+            let temp = *helper(input);
+            if let Node::Send(value) = temp {
+                assert_eq!(parse_send(value), check);
+            } else {
+                assert_eq!(true, false, "input wassn't a send node");
+            }
+        }
+
+        #[test]
+        fn require_single() {
+            send_helper_tester("params.require(:asdf)", SendTypes::ParamsRequire);
+        }
+
+        #[test]
+        fn permit_single() {
+            send_helper_tester("params.permit(:asdf)", SendTypes::ParamsPermit);
+        }
+
+        #[test]
+        fn require_params_correct_order() {
+            send_helper_tester(
+                "params.require(:asdf).permit(:asdf)",
+                SendTypes::ParamsRequirePermit,
+            );
+        }
+
+        #[test]
+        fn params_require_wrong_order() {
+            send_helper_tester("params.permit(:asdf).require(:asdf)", SendTypes::Invalid);
+        }
     }
 
     // #[test]
