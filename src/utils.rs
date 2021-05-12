@@ -10,6 +10,13 @@ pub fn parse_optional_name(node: &Option<Box<Node>>) -> String {
 
 pub fn parse_node_str(node: &Node) -> String {
     match node {
+        Node::Send(stat) => {
+            if stat.args.is_empty() && stat.recv.is_none(){
+                return stat.method_name.clone();
+            }else{
+                "unknown".to_string()
+            }
+        }
         Node::Sym(sym) => sym.name.to_string_lossy(),
         Node::Ivar(ivar) => ivar.name.clone(),
         Node::Str(str) => str.value.to_string_lossy(),
