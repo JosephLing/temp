@@ -103,7 +103,7 @@ pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {
                         method: temp2,
                         prefix: "".to_string(),
                         uri: foo[i][1].replace("(.:format)", ""),
-                        controller: temp[0].to_string(),
+                        controller: temp[0].to_string() + "_controller",
                         action: temp[1].to_string(),
                     })
                 } else {
@@ -119,7 +119,7 @@ pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {
                         method: RequestMethod::from_str(&foo[i][1])?,
                         prefix: foo[i][0].clone(),
                         uri: foo[i][2].replace("(.:format)", ""),
-                        controller: temp[0].to_string(),
+                        controller: temp[0].to_string() + "_controller",
                         action: temp[1].to_string(),
                     })
                 }
@@ -136,7 +136,7 @@ pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {
                     method: RequestMethod::from_str(&foo[i][0])?,
                     prefix: "".to_string(),
                     uri: foo[i][1].replace("(.:format)", ""),
-                    controller: temp[0].to_string(),
+                    controller: temp[0].to_string() + "_controller",
                     action: temp[1].to_string(),
                 })
             } else {
@@ -175,7 +175,7 @@ mod routes_parsing {
                 method: RequestMethod::POST,
                 prefix: "email_processor".to_string(),
                 uri: "/email_processor".to_string(),
-                controller: "griddler/emails".to_string(),
+                controller: "griddler/emails_controller".to_string(),
                 action: "create".to_string(),
             }
         );
@@ -186,7 +186,7 @@ mod routes_parsing {
                 method: RequestMethod::PATCH,
                 prefix: "".to_string(),
                 uri: "/dog/form".to_string(),
-                controller: "dog_forms".to_string(),
+                controller: "dog_forms_controller".to_string(),
                 action: "update".to_string(),
             }
         );
