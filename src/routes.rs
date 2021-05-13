@@ -1,7 +1,7 @@
-use std::str::FromStr;
-use crate::types::{AppData};
-use std::collections::{HashSet};
+use crate::types::AppData;
 use convert_case::{Case, Casing};
+use std::collections::HashSet;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]
 pub enum RequestMethod {
@@ -46,25 +46,37 @@ impl std::fmt::Display for Request {
 
 impl Request {
     pub fn get_params(&self, app_data: &AppData) -> Result<HashSet<String>, String> {
-        if let Some(controller) = app_data.controllers.get(&self.controller.to_case(Case::Pascal)) {
+        if let Some(controller) = app_data
+            .controllers
+            .get(&self.controller.to_case(Case::Pascal))
+        {
             let mut params: HashSet<String>;
             // handle action
             if let Some(method) = controller.get_method_by_name(&self.action, app_data) {
                 params = controller.get_method_params(&method, app_data);
             } else {
-                return Err(format!("ERROR: action {} not found for request {}", self.action, self.uri));
+                return Err(format!(
+                    "ERROR: action {} not found for request {}",
+                    self.action, self.uri
+                ));
             }
             // handle before/after/rescue
             for (_, action_name) in &controller.actions {
                 if let Some(method) = controller.get_method_by_name(action_name, app_data) {
                     params.extend(controller.get_method_params(&method, app_data));
                 } else {
-                    return Err(format!("ERROR: action {} not found for request {}", self.action, self.uri));
+                    return Err(format!(
+                        "ERROR: action {} not found for request {}",
+                        self.action, self.uri
+                    ));
                 }
             }
             return Ok(params);
         } else {
-            return Err(format!("ERROR: controller {} not found for request {}", self.controller, self.uri));
+            return Err(format!(
+                "ERROR: controller {} not found for request {}",
+                self.controller, self.uri
+            ));
         }
     }
 }

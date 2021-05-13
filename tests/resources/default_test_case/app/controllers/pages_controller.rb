@@ -13,14 +13,21 @@ class PagesController < ApplicationController
         json_ok(blog_category.where(page: @page_index).to_json, 200)
     end
 
+    def show
+        @data = 1
+    end
+
     private 
 
     def user_details
         User.find(params[:user_id]).where(page: @page_index)
     end
-
+    
+    # params -> []
+    # second pass knowing that details = params 
+    # params -> [:cat]
     def foobar(details)
 
-        details[:asdfsdf]
+        details[:cat]
     end
 end

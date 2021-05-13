@@ -85,3 +85,25 @@ for (k, v) in &local_varaibles {
 By running our script to get the output:
 - pages/index takes auth_token, index, user_id,cat
 - blog/:cat/pages/index takes auth_token, index, user_id,cat
+
+
+
+
+- controller stuff 99%
+- routes - I'll sort 
+
+pages/index
+
+call index - what methods does this call? do any these methods use params?
+
+method_details.methods_calls and .params
+
+Stretch goal: foobar(params)
+
+pages/index
+{
+    id,
+    title,
+    description,
+    ?read_count
+}

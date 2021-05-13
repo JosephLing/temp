@@ -18,10 +18,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("--- Controllers ---");
     for (_, con) in &app_data.controllers {
         println!("[{:?}] {} < {}", con.module, con.name, con.parent);
-        for include in &con.include{
+        for include in &con.include {
             println!("#include {}", include);
         }
-        for (kind, action) in &con.actions{
+        for (kind, action) in &con.actions {
             println!("#{:?} {}", kind, action);
         }
         for method in &con.get_own_methods() {
@@ -61,6 +61,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match route.get_params(&app_data) {
             Ok(p) => println!("{:?}", p),
             Err(err) => println!("{}", err),
+        }
+    }
+
+    println!("--- Views ---");
+    for (controller, value) in &app_data.views {
+        for (action, view) in value {
+            println!("{}#{}\n\t{:?}", controller, action, view.response);
         }
     }
 

@@ -2,6 +2,7 @@ mod params;
 mod routes;
 mod types;
 mod utils;
+mod views;
 
 use types::{ActionKinds, AppData, Concern, Controller, HelperModule, MethodDetails};
 
@@ -70,31 +71,43 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                         match stat {
                             Node::Send(send_thing) => match send_thing.method_name.as_str() {
                                 "before_action" => {
-                                    for arg in &send_thing.args{
-                                        actions.push((ActionKinds::BeforeAction, utils::parse_node_str(arg)));
+                                    for arg in &send_thing.args {
+                                        actions.push((
+                                            ActionKinds::BeforeAction,
+                                            utils::parse_node_str(arg),
+                                        ));
                                     }
                                 }
                                 "around_action" => {
-                                    for arg in &send_thing.args{
-                                        actions.push((ActionKinds::AroundAction, utils::parse_node_str(arg)));
+                                    for arg in &send_thing.args {
+                                        actions.push((
+                                            ActionKinds::AroundAction,
+                                            utils::parse_node_str(arg),
+                                        ));
                                     }
                                 }
                                 "require" => {}
                                 "include" => {
-                                    for arg in &send_thing.args{
+                                    for arg in &send_thing.args {
                                         includes.push(utils::parse_node_str(arg));
                                     }
                                 }
                                 "private" => {}
                                 "protected" => {}
                                 "rescue_from" => {
-                                    for arg in &send_thing.args{
-                                        actions.push((ActionKinds::RescueFrom, utils::parse_node_str(arg)));
+                                    for arg in &send_thing.args {
+                                        actions.push((
+                                            ActionKinds::RescueFrom,
+                                            utils::parse_node_str(arg),
+                                        ));
                                     }
                                 }
                                 _ => {
-                                    for arg in &send_thing.args{
-                                        actions.push((ActionKinds::Custom(send_thing.method_name.clone()), utils::parse_node_str(arg)));
+                                    for arg in &send_thing.args {
+                                        actions.push((
+                                            ActionKinds::Custom(send_thing.method_name.clone()),
+                                            utils::parse_node_str(arg),
+                                        ));
                                     }
                                 }
                             },
@@ -346,7 +359,7 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
     let mut route_path = root.clone();
     route_path.push("test.routes");
 
-    let mut routes: HashMap::<String, Request> = HashMap::new();
+    let mut routes: HashMap<String, Request> = HashMap::new();
     for route in parse_routes(&fs::read_to_string(route_path)?)? {
         routes.insert(route.uri.clone(), route);
     }
@@ -356,6 +369,7 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
         helpers: HashMap::new(),
         controllers: HashMap::new(),
         routes,
+        views: HashMap::new(),
     };
 
     let mut app_dir = root.clone();
@@ -366,6 +380,9 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
 
     let mut controllers_path = app_dir.clone();
     controllers_path.push("controllers");
+
+    let mut view_path = app_dir.clone();
+    view_path.push("views");
 
     parse_files(
         &controllers_path,
@@ -379,6 +396,8 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
         &mut app_data.concerns,
         &mut app_data.helpers,
     )?;
+
+    views::parse_view_files(&view_path, &mut app_data.views)?;
 
     Ok(app_data)
 }

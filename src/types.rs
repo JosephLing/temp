@@ -1,5 +1,5 @@
+use crate::routes::Request;
 use std::collections::{HashMap, HashSet};
-use crate::routes::{Request};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDetails {
@@ -16,11 +16,11 @@ pub struct MethodDetails {
     pub renders: Vec<String>,                     // TODO: implement this one
 }
 #[derive(Debug)]
-pub enum ActionKinds{
+pub enum ActionKinds {
     BeforeAction,
     AroundAction,
     RescueFrom,
-    Custom(String)
+    Custom(String),
 }
 
 #[derive(Debug)]
@@ -53,6 +53,21 @@ pub struct AppData {
     pub helpers: HashMap<String, HelperModule>,
     pub controllers: HashMap<String, Controller>,
     pub routes: HashMap<String, Request>,
+    pub views: HashMap<String, HashMap<String, View>>,
+}
+
+#[derive(Debug)]
+pub enum ViewType {
+    Jbuilder,
+    Jb,
+}
+// response is a vector for conditional responses
+#[derive(Debug)]
+pub struct View {
+    pub controller: String,
+    pub method: String,
+    pub response: Vec<String>,
+    pub view_type: ViewType,
 }
 
 impl Controller {
@@ -68,21 +83,21 @@ impl Controller {
     }
 
     pub fn get_included_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
-        let mut methods: Vec<MethodDetails> = Vec::new(); 
+        let mut methods: Vec<MethodDetails> = Vec::new();
         for included in &self.include {
             let mut include_found = false;
             match app_data.concerns.get(included) {
                 Some(con) => {
                     methods.append(&mut con.methods.clone());
                     include_found = true;
-                },
+                }
                 None => {}
             }
             match app_data.helpers.get(included) {
                 Some(hel) => {
                     methods.append(&mut hel.methods.clone());
                     include_found = true;
-                },
+                }
                 None => {}
             }
             if !include_found {
@@ -114,7 +129,10 @@ impl Controller {
             if let Some(sub) = self.get_method_by_name(sub_name, app_data) {
                 params.extend(self.get_method_params(&sub, app_data));
             } else {
-                println!("WARNING: no details found for {} in controller {}", sub_name, self.name);
+                println!(
+                    "WARNING: no details found for {} in controller {}",
+                    sub_name, self.name
+                );
             }
         }
         return params;
