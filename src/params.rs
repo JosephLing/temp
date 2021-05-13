@@ -110,6 +110,7 @@ pub fn create_method_details(
         "split",
         "starts_with",
         "logger",
+        "params",
     ];
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();
