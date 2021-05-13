@@ -16,7 +16,7 @@ use lib_ruby_parser::{nodes::Class, Node, Parser};
 use utils::{get_node_name, parse_name, parse_superclass};
 use walkdir::{DirEntry, WalkDir};
 
-use crate::routes::parse_routes;
+use crate::routes::{parse_routes, Request};
 
 #[derive(Debug)]
 enum File {
@@ -343,16 +343,20 @@ fn parse_files(
 }
 
 pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
+    let mut route_path = root.clone();
+    route_path.push("test.routes");
+
+    let mut routes: HashMap::<String, Request> = HashMap::new();
+    for route in parse_routes(&fs::read_to_string(route_path)?)? {
+        routes.insert(route.uri.clone(), route);
+    }
+
     let mut app_data = AppData {
         concerns: HashMap::new(),
         helpers: HashMap::new(),
         controllers: HashMap::new(),
+        routes,
     };
-
-    let mut route_path = root.clone();
-    route_path.push("test.routes");
-    let routes = parse_routes(&fs::read_to_string(route_path)?);
-    println!("Routes {:?}", routes);
 
     let mut app_dir = root.clone();
     app_dir.push("app");
@@ -361,7 +365,6 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
     helpers_path.push("helpers");
 
     let mut controllers_path = app_dir.clone();
-
     controllers_path.push("controllers");
 
     parse_files(

@@ -19,19 +19,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (_, con) in &app_data.controllers {
         println!("[{:?}] {} < {}", con.module, con.name, con.parent);
         for include in &con.include{
-            println!("\tinclude {}", include);
+            println!("#include {}", include);
         }
         for (kind, action) in &con.actions{
-            println!("\t {:?} {}", kind, action);
+            println!("#{:?} {}", kind, action);
         }
         for method in &con.get_own_methods() {
-            println!("- {}", method);
+            println!("- {}", method.name);
         }
         for method in &con.get_inherited_methods(&app_data) {
-            println!("> {}", method);
+            println!("> {}", method.name);
         }
         for method in &con.get_included_methods(&app_data) {
-            println!("+ {}", method);
+            println!("+ {}", method.name);
         }
         println!();
     }
@@ -40,16 +40,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (_, hel) in &app_data.helpers {
         println!("{}", hel.name);
         for method in &hel.methods {
-            println!("{}", method);
+            println!("- {}", method.name);
         }
+        println!();
     }
 
     println!("--- Concerns ---");
     for (_, con) in &app_data.concerns {
         println!("{}", con.name);
         for method in &con.methods {
-            println!("{}", method);
+            println!("- {}", method.name);
         }
+        println!();
+    }
+
+    println!("--- Routes ---");
+    for (_, route) in &app_data.routes {
+        println!("{}", route);
     }
 
     Ok(())

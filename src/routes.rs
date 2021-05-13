@@ -28,9 +28,9 @@ impl FromStr for RequestMethod {
 
 #[derive(Debug, PartialEq)]
 pub struct Request {
-    method: RequestMethod,
-    prefix: String,
-    uri: String,
+    pub method: RequestMethod,
+    pub prefix: String,
+    pub uri: String,
     pub controller: String,
     pub action: String,
 }

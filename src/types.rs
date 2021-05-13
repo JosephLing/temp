@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use crate::routes::{Request};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDetails {
@@ -51,6 +52,7 @@ pub struct AppData {
     pub concerns: HashMap<String, Concern>,
     pub helpers: HashMap<String, HelperModule>,
     pub controllers: HashMap<String, Controller>,
+    pub routes: HashMap<String, Request>,
 }
 
 impl Controller {
