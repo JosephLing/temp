@@ -79,6 +79,15 @@ impl Request {
             ));
         }
     }
+
+    pub fn get_view(&self, app_data: &AppData) -> Result<String, String>{
+        if let Some(actions) = app_data.views.get(self.controller.trim_end_matches("_controller")){
+            if let Some(view) = actions.get(&self.action){
+                return Ok(view.response.join(","))
+            }
+        }
+        Err("not found".to_string())
+    }
 }
 
 pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {

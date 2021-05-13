@@ -170,13 +170,20 @@ pub fn parse_view_files(
                 .last()
                 .unwrap()
                 .to_string();
+            let action = f
+                .display()
+                .to_string()
+                .split("/")
+                .last()
+                .unwrap()
+                .to_string();
             let views_controller = views.entry(controller.clone()).or_insert(HashMap::new());
             let parser = Parser::new(&fs::read(entry.path())?, Default::default()).do_parse();
 
-            if name.ends_with(".jbuilder") {
+            if action.ends_with(".jbuilder") {
                 views_controller.insert(
-                    name.trim_end_matches(".jbuilder").to_owned(),
-                    parse_jbuilder(parser, name, controller)?,
+                    action.trim_end_matches(".jbuilder").to_owned(),
+                    parse_jbuilder(parser, action, controller)?,
                 );
             }
         }
