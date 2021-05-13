@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::iter::{Extend};
 use crate::routes::{Request};
 
 #[derive(Debug, PartialEq, Clone)]
