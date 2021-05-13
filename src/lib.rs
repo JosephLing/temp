@@ -104,7 +104,10 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                 "require" => {}
                                 "include" => {
                                     for arg in &send_thing.args {
-                                        includes.push(utils::parse_node_str(arg));
+                                        let temp = utils::parse_node_str(arg);
+                                        if !temp.starts_with("ActionController"){
+                                            includes.push(temp);
+                                        }
                                     }
                                 }
                                 "private" => {}
