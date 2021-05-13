@@ -65,9 +65,35 @@ impl Controller {
         }
     }
 
+    pub fn get_included_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
+        let mut methods: Vec<MethodDetails> = Vec::new(); 
+        for included in &self.include {
+            let mut include_found = false;
+            match app_data.concerns.get(included) {
+                Some(con) => {
+                    methods.append(&mut con.methods.clone());
+                    include_found = true;
+                },
+                None => {}
+            }
+            match app_data.helpers.get(included) {
+                Some(hel) => {
+                    methods.append(&mut hel.methods.clone());
+                    include_found = true;
+                },
+                None => {}
+            }
+            if !include_found {
+                println!("WARNING: Include {} not found for {}", included, self.name);
+            }
+        }
+        return methods;
+    }
+
     pub fn get_all_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
         let mut methods = self.get_own_methods();
         methods.append(&mut self.get_inherited_methods(app_data));
+        methods.append(&mut self.get_included_methods(app_data));
         return methods;
     }
 }

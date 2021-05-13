@@ -28,6 +28,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("- {}", method);
         }
         for method in &con.get_inherited_methods(&app_data) {
+            println!("> {}", method);
+        }
+        for method in &con.get_included_methods(&app_data) {
             println!("+ {}", method);
         }
         println!();
