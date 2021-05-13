@@ -1,0 +1,70 @@
+Got 12 errors out of a total of 23 files
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/upload_features.rb "single file classes not supported"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/auth_helper.rb "invalid parsed file result found None"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/auth_helper.rb "invalid parsed file result found None"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/salesforce_helper.rb "invalid parsed file result found None"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/salesforce_helper.rb "invalid parsed file result found None"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/case_similarity.rb "single file classes not supported"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/case_helper.rb "invalid parsed file result found None"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/import_team_users.rb "single file classes not supported"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/invite_end_users.rb "single file classes not supported"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/cms.rb "single file classes not supported"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/import_end_users.rb "single file classes not supported"
+/Users/angelorendina/receptive/apps/api2/src/app/helpers/i18n/translation_loader.rb "single file classes not supported"
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+
+
+parent: 
+parent: 
+parent: 
+parent: 
+parent: creator
+parent: creator
+parent: uploads
+parent: 
+parent: 
+parent: array!
+parent: array!
+
+parent: 
+parent: 
+parent: array!
+
+parent: 
+parent: array!
+parent: array!
+parent: array!
+parent: array!
+parent: array!
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: 
+parent: array!
+parent: array!
+parent: array!
+parent: array!
+parent: 
+parent: 
+parent: 
+parent: 
+--- Routes ---
+POST /internal/vendors/:vendor_id/signing_keys
+@ params = ERROR: controller internal/signing_keys_controller not found for request /internal/vendors/:vendor_id/signing_keys
+POST /roadmaps
+@ params = Action "update_themes" not found in Controller { name: "RoadmapsController", parent: "ApplicationController", methods: [MethodDetails { name: "create", args: [], params: {"visibility", "name"}, headers: [], instance_varaibles: {"@roadmap"}, local_varaibles: {}, method_calls: [("update_themes", ["@user"]), ("vendor_user_only", []), ("create!", ["roadmap_params"]), ("has_permission?", ["roadmap_editing"]), ("is_admin_user?", []), ("forbid", []), ("client_error", ["no name specified"]), ("roadmap_params", []), ("roadmaps", []), ("client_error", ["unknown visibility type"]), ("vendor", [])], renders: ["show"] }, MethodDetails { name: "index", args: [], params: {}, headers: [], instance_varaibles: {"@roadmaps"}, local_varaibles: {}, method_calls: [("roadmaps", []), ("end_user?", []), ("vendor", [])], renders: [] }, MethodDetails { name: "update", args: [], params: {"visibility", "id"}, headers: [], instance_varaibles: {"@roadmap"}, local_varaibles: {}, method_calls: [("update", ["roadmap_params"]), ("update_themes", ["@user"]), ("vendor_user_only", []), ("check_our_vendor", ["@roadmap"]), ("roadmap_params", []), ("has_permission?", ["roadmap_editing"]), ("is_admin_user?", []), ("forbid", []), ("client_error", ["unknown visibility type"])], renders: ["show"] }, MethodDetails { name: "public_roadmap", args: [], params: {"permalink"}, headers: [], instance_varaibles: {"@roadmap"}, local_varaibles: {}, method_calls: [("public?", []), ("not_found", [])], renders: ["show"] }, MethodDetails { name: "public_roadmap_cases", args: [], params: {"permalink"}, headers: [], instance_varaibles: {"@cases"}, local_varaibles: {"roadmap": 3}, method_calls: [("all_cases_in_roadmaps", ["unknown"]), ("public?", []), ("not_found", []), ("vendor", [])], renders: ["roadmap_cases"] }, MethodDetails { name: "cases", args: [], params: {}, headers: [], instance_varaibles: {"@cases"}, local_varaibles: {"vendor": 0}, method_calls: [("vendor", []), ("all_cases_in_roadmaps", ["unknown", "include_private=>unknown"]), ("vendor", []), ("end_user?", [])], renders: ["roadmap_cases"] }, MethodDetails { name: "destroy", args: [], params: {"id"}, headers: [], instance_varaibles: {}, local_varaibles: {"roadmap": 1}, method_calls: [("destroy", []), ("update_themes", ["@user"]), ("head", ["ok"]), ("vendor_user?", []), ("forbid", []), ("has_permission?", ["roadmap_editing"]), ("is_admin_user?", []), ("forbid", []), ("roadmaps", []), ("vendor", [])], renders: [] }, MethodDetails { name: "roadmap_params", args: [], params: {"name", "visibility", "roadmap"}, headers: [], instance_varaibles: {}, local_varaibles: {}, method_calls: [], renders: [] }, MethodDetails { name: "all_cases_in_roadmaps", args: [], params: {}, headers: [], instance_varaibles: {}, local_varaibles: {"roadmap_tags": 1, "query": 2}, method_calls: [("tagged_with", ["roadmap_tags", "any=>true"]), ("model_tag_list", ["Case", "case", "roadmap_theme"]), ("vendor", ["vendor"]), ("not_private", [])], renders: [] }], actions: [(Custom("skip_auth_methods"), "only=>[public_roadmap,public_roadmap_cases]")], include: [], module: None }
+Action "create!" not found in Controller { name: "RoadmapsController", parent: "ApplicationController", methods: [MethodDetails { name: "create", args: [], params: {"visibility", "name"}, headers: [], instance_varaibles: {"@roadmap"}, local_varaibles: {}, method_calls: [("update_themes", ["@user"]), ("vendor_user_only", []), ("create!", ["roadmap_params"]), ("has_permission?", ["roadmap_editing"]), ("is_admin_user?", []), ("forbid", []), ("client_error", ["no name specified"]), ("roadmap_params", []), ("roadmaps", []), ("client_error", ["unknown visibility type"]), ("vendor", [])], renders: ["show"] }, MethodDetails { name: "index", args: [], params: {}, headers: [], instance_varaibles: {"@roadmaps"}, local_varaibles: {}, method_calls: [("roadmaps", []), ("end_user?", []), ("vendor", [])], renders: [] }, MethodDetails { name: "update", args: [], params: {"visibility", "id"}, headers: [], instance_varaibles: {"@roadmap"}, local_varaibles: {}, method_calls: [("update", ["roadmap_params"]), ("update_themes", ["@user"]), ("vendor_user_only", []), ("check_our_vendor", ["@roadmap"]), ("roadmap_params", []), ("has_permission?", ["roadmap_editing"]), ("is_admin_user?", []), ("forbid", []), ("client_error", ["unknown visibility type"])], renders: ["show"] }, MethodDetails { name: "public_roadmap", args: [], params: {"permalink"}, headers: [], instance_varaibles: {"@roadmap"}, local_varaibles: {}, method_calls: [("public?", []), ("not_found", [])], renders: ["show"] }, MethodDetails { name: "public_roadmap_cases", args: [], params: {"permalink"}, headers: [], instance_varaibles: {"@cases"}, local_varaibles: {"roadmap": 3}, method_calls: [("all_cases_in_roadmaps", ["unknown"]), ("public?", []), ("not_found", []), ("vendor", [])], renders: ["roadmap_cases"] }, MethodDetails { name: "cases", args: [], params: {}, headers: [], instance_varaibles: {"@cases"}, local_varaibles: {"vendor": 0}, method_calls: [("vendor", []), ("all_cases_in_roadmaps", ["unknown", "include_private=>unknown"]), ("vendor", []), ("end_user?", [])], renders: ["roadmap_cases"] }, MethodDetails { name: "destroy", args: [], params: {"id"}, headers: [], instance_varaibles: {}, local_varaibles: {"roadmap": 1}, method_calls: [("destroy", []), ("update_themes", ["@user"]), ("head", ["ok"]), ("vendor_user?", []), ("forbid", []), ("has_permission?", ["roadmap_editing"]), ("is_admin_user?", []), ("forbid", []), ("roadmaps", []), ("vendor", [])], renders: [] }, MethodDetails { name: "roadmap_params", args: [], params: {"name", "visibility", "roadmap"}, headers: [], instance_varaibles: {}, local_varaibles: {}, method_calls: [], renders: [] }, MethodDetails { name: "all_cases_in_roadmaps", args: [], params: {}, headers: [], instance_varaibles: {}, local_varaibles: {"roadmap_tags": 1, "query": 2}, method_calls: [("tagged_with", ["roadmap_tags", "any=>true"]), ("model_tag_list", ["Case", "case", "roadmap_theme"]), ("vendor", ["vendor"]), ("not_private", [])], renders: [] }], actions: [(Custom("skip_auth_methods"), "only=>[public_roadmap,public_roadmap_cases]")], include: [], module: None }

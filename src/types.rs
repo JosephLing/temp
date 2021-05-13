@@ -115,11 +115,16 @@ impl Controller {
     }
 
     pub fn get_method_by_name(&self, name: &str, app_data: &AppData) -> Option<MethodDetails> {
+        use std::io::{stdin, Read};
         for method in self.get_all_methods(app_data) {
             if method.name == name {
                 return Some(method);
             }
         }
+        println!(" -- ERROR -- ");
+        println!("Action {:?} not found in", name);
+        self.pretty(app_data);
+        stdin().read(&mut [0]).unwrap();
         return None;
     }
 
@@ -134,14 +139,33 @@ impl Controller {
                 if sub.method_calls != method.method_calls && method.args != sub.args{
                     params.extend(self.get_method_params(&sub, app_data));
                 }
-            } 
-            // else {
-            //     println!(
-            //         "WARNING: no details found for {} in controller {}",
-            //         sub_name, self.name
-            //     );
-            // }
+            } else {
+                // println!(
+                //     "WARNING: no details found for {} in controller {}",
+                //     sub_name, self.name
+                // );
+            }
         }
         return params;
+    }
+
+    pub fn pretty(&self, app_data: &AppData) {
+        println!("[{:?}] {} < {}", self.module, self.name, self.parent);
+        for include in &self.include {
+            println!("#include {}", include);
+        }
+        for (kind, action) in &self.actions {
+            println!("#{:?} {}", kind, action);
+        }
+        for method in &self.get_own_methods() {
+            println!("- {}", method.name);
+        }
+        for method in &self.get_inherited_methods(&app_data) {
+            println!("> {}", method.name);
+        }
+        for method in &self.get_included_methods(&app_data) {
+            println!("+ {}", method.name);
+        }
+        println!();
     }
 }
