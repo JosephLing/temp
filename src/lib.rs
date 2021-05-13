@@ -68,12 +68,12 @@ fn parse_actions(send_thing: Send, actions: &mut Vec<(ActionKinds, String)>) {
             }
         }
         _ => {
-            for arg in &send_thing.args {
-                actions.push((
-                    ActionKinds::Custom(send_thing.method_name.clone()),
-                    utils::parse_node_str(arg),
-                ));
-            }
+            // for arg in &send_thing.args {
+            //     actions.push((
+            //         ActionKinds::Custom(send_thing.method_name.clone()),
+            //         utils::parse_node_str(arg),
+            //     ));
+            // }
         }
     }
 }

@@ -73,6 +73,7 @@ pub fn create_method_details(
 ) -> MethodDetails {
     let invalid_method_names = vec![
         "==",
+        "===",
         ">",
         "!=",
         "<",

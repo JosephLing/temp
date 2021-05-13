@@ -56,8 +56,8 @@ impl Request {
                 params = controller.get_method_params(&method, app_data);
             } else {
                 return Err(format!(
-                    "ERROR: action {} not found for request {}",
-                    self.action, self.uri
+                    "ERROR: action {} not found in controller {} for request {}",
+                    self.action, &self.controller.to_case(Case::Pascal), self.uri
                 ));
             }
             // handle before/after/rescue
@@ -66,16 +66,16 @@ impl Request {
                     params.extend(controller.get_method_params(&method, app_data));
                 } else {
                     return Err(format!(
-                        "ERROR: action {} not found for request {}",
-                        self.action, self.uri
+                        "ERROR: action {} not found in controller {} for request {}",
+                        self.action, &self.controller.to_case(Case::Pascal), self.uri
                     ));
                 }
             }
             return Ok(params);
         } else {
             return Err(format!(
-                "ERROR: controller {} not found for request {}",
-                self.controller, self.uri
+                "ERROR: action {} not found in controller {} for request {}",
+                self.action, &self.controller.to_case(Case::Pascal), self.uri
             ));
         }
     }

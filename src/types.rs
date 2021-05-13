@@ -134,12 +134,13 @@ impl Controller {
                 if sub.method_calls != method.method_calls && method.args != sub.args{
                     params.extend(self.get_method_params(&sub, app_data));
                 }
-            } else {
-                println!(
-                    "WARNING: no details found for {} in controller {}",
-                    sub_name, self.name
-                );
-            }
+            } 
+            // else {
+            //     println!(
+            //         "WARNING: no details found for {} in controller {}",
+            //         sub_name, self.name
+            //     );
+            // }
         }
         return params;
     }

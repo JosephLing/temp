@@ -51,7 +51,6 @@ fn parse_jbuiler_nodes(node: &Node, optional: bool, parent: &str) -> Vec<String>
                 }
             }
             Node::If(stat) => {
-                println!("parent: {}", parent);
                 stat.if_true.iter().for_each(|b| {
                     results.append(&mut parse_jbuiler_nodes(b, true, parent.clone()))
                 });
