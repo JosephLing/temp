@@ -1,4 +1,6 @@
 class PagesController < ApplicationController
+    include PageHelper
+
     before_action :get_page_number
 
     def get_page_number

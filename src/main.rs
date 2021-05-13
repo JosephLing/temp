@@ -57,6 +57,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("--- Routes ---");
     for (_, route) in &app_data.routes {
         println!("{}", route);
+        print!("@ params = ");
+        match route.get_params(&app_data) {
+            Ok(p) => println!("{:?}", p),
+            Err(err) => println!("{}", err),
+        }
     }
 
     Ok(())

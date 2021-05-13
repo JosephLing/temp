@@ -1,4 +1,7 @@
 use std::str::FromStr;
+use crate::types::{AppData};
+use std::collections::{HashSet};
+use convert_case::{Case, Casing};
 
 #[derive(Debug, PartialEq)]
 pub enum RequestMethod {
@@ -38,6 +41,20 @@ pub struct Request {
 impl std::fmt::Display for Request {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?} {}", self.method, self.uri)
+    }
+}
+
+impl Request {
+    pub fn get_params(&self, app_data: &AppData) -> Result<HashSet<String>, String> {
+        if let Some(controller) = app_data.controllers.get(&self.controller.to_case(Case::Pascal)) {
+            if let Some(method) = controller.get_method_by_name(&self.action, app_data) {
+                return Ok(controller.get_method_params(&method, app_data));
+            } else {
+                return Err(format!("ERROR: action {} not found for request {}", self.action, self.uri));
+            }
+        } else {
+            return Err(format!("ERROR: controller {} not found for request {}", self.controller, self.uri));
+        }
     }
 }
 

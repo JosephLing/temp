@@ -111,6 +111,7 @@ pub fn create_method_details(
         "starts_with",
         "logger",
         "params",
+        "to_json",
     ];
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();

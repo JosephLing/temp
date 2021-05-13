@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::iter::{Extend};
 use crate::routes::{Request};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -97,5 +98,26 @@ impl Controller {
         methods.append(&mut self.get_inherited_methods(app_data));
         methods.append(&mut self.get_included_methods(app_data));
         return methods;
+    }
+
+    pub fn get_method_by_name(&self, name: &str, app_data: &AppData) -> Option<MethodDetails> {
+        for method in self.get_all_methods(app_data) {
+            if method.name == name {
+                return Some(method);
+            }
+        }
+        return None;
+    }
+
+    pub fn get_method_params(&self, method: &MethodDetails, app_data: &AppData) -> HashSet<String> {
+        let mut params = method.params.clone();
+        for (sub_name, _) in &method.method_calls {
+            if let Some(sub) = self.get_method_by_name(sub_name, app_data) {
+                params.extend(self.get_method_params(&sub, app_data));
+            } else {
+                println!("WARNING: no details found for {} in controller {}", sub_name, self.name);
+            }
+        }
+        return params;
     }
 }
