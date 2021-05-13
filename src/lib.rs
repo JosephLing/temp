@@ -12,7 +12,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use lib_ruby_parser::{nodes::Class, Node, Parser};
+use lib_ruby_parser::{
+    nodes::{Class, Send},
+    Node, Parser,
+};
 
 use utils::{get_node_name, parse_name, parse_superclass};
 use walkdir::{DirEntry, WalkDir};
@@ -47,6 +50,34 @@ fn get_method_details_from_optional(
     None
 }
 
+fn parse_actions(send_thing: Send, actions: &mut Vec<(ActionKinds, String)>) {
+    match send_thing.method_name.as_str() {
+        "before_action" => {
+            for arg in &send_thing.args {
+                actions.push((ActionKinds::BeforeAction, utils::parse_node_str(arg)));
+            }
+        }
+        "around_action" => {
+            for arg in &send_thing.args {
+                actions.push((ActionKinds::AroundAction, utils::parse_node_str(arg)));
+            }
+        }
+        "rescue_from" => {
+            for arg in &send_thing.args {
+                actions.push((ActionKinds::RescueFrom, utils::parse_node_str(arg)));
+            }
+        }
+        _ => {
+            for arg in &send_thing.args {
+                actions.push((
+                    ActionKinds::Custom(send_thing.method_name.clone()),
+                    utils::parse_node_str(arg),
+                ));
+            }
+        }
+    }
+}
+
 fn parse_class(class: Class, module: String) -> Result<File, String> {
     let name = parse_name(class.name);
     let superclass = parse_superclass(class.superclass);
@@ -70,22 +101,6 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                     for stat in stat.statements {
                         match stat {
                             Node::Send(send_thing) => match send_thing.method_name.as_str() {
-                                "before_action" => {
-                                    for arg in &send_thing.args {
-                                        actions.push((
-                                            ActionKinds::BeforeAction,
-                                            utils::parse_node_str(arg),
-                                        ));
-                                    }
-                                }
-                                "around_action" => {
-                                    for arg in &send_thing.args {
-                                        actions.push((
-                                            ActionKinds::AroundAction,
-                                            utils::parse_node_str(arg),
-                                        ));
-                                    }
-                                }
                                 "require" => {}
                                 "include" => {
                                     for arg in &send_thing.args {
@@ -94,22 +109,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                 }
                                 "private" => {}
                                 "protected" => {}
-                                "rescue_from" => {
-                                    for arg in &send_thing.args {
-                                        actions.push((
-                                            ActionKinds::RescueFrom,
-                                            utils::parse_node_str(arg),
-                                        ));
-                                    }
-                                }
-                                _ => {
-                                    for arg in &send_thing.args {
-                                        actions.push((
-                                            ActionKinds::Custom(send_thing.method_name.clone()),
-                                            utils::parse_node_str(arg),
-                                        ));
-                                    }
-                                }
+                                _ => parse_actions(send_thing, &mut actions),
                             },
                             Node::Def(stat) => {
                                 get_method_details_from_optional(
@@ -207,6 +207,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                 let mut helper_found = false;
                 let mut concern_found = false;
                 let mut methods = Vec::<MethodDetails>::new();
+                let mut actions = Vec::new();
                 for stat in begin.statements {
                     match stat {
                         Node::Module(module) => {
@@ -252,6 +253,36 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                                 helper_found = true;
                             }
                         }
+                        Node::Block(block) => {
+                            if concern_found {
+                                if block.args.is_some() {
+                                    return Err("included only supported in concerns".to_owned());
+                                }
+                                if let Node::Send(stat) = *block.call {
+                                    if stat.method_name == "included" {
+                                        for arg in block.args {
+                                            match *arg {
+                                                Node::Send(action_stat) => {
+                                                    parse_actions(action_stat, &mut actions)
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    } else {
+                                        return Err(format!(
+                                            "expected 'included' call got instead '{}'",
+                                            stat.method_name
+                                        ));
+                                    }
+                                } else {
+                                    return Err("expected send for call block".to_owned());
+                                }
+                            } else {
+                                return Err(
+                                    "blocks are only supported inside concerns atm".to_owned()
+                                );
+                            }
+                        }
                         _ => {
                             println!("{:?}", stat);
                             return Err(
@@ -269,7 +300,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                     files.push(File::Concern(Concern {
                         name: module_name.clone(),
                         methods,
-                        actions: Vec::new(),
+                        actions,
                     }));
                 }
             }

@@ -44,7 +44,7 @@ pub struct HelperModule {
 pub struct Concern {
     pub name: String,
     pub methods: Vec<MethodDetails>,
-    pub actions: Vec<String>, // TODO: work out what this looks like
+    pub actions: Vec<(ActionKinds, String)>,
 }
 
 #[derive(Debug)]
