@@ -112,6 +112,8 @@ pub fn create_method_details(
         "logger",
         "params",
         "to_json",
+        "warn",
+        "touch!"
     ];
     let mut params = HashSet::new();
     let mut headers: Vec<(String, String)> = Vec::new();

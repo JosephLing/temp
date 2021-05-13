@@ -1,5 +1,5 @@
 use crate::routes::Request;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDetails {
@@ -127,7 +127,13 @@ impl Controller {
         let mut params = method.params.clone();
         for (sub_name, _) in &method.method_calls {
             if let Some(sub) = self.get_method_by_name(sub_name, app_data) {
-                params.extend(self.get_method_params(&sub, app_data));
+                // Currently we can't distinguish between 
+                //   def has_permission?(permission)
+                //     @user.has_permission?(permission)
+                //   end
+                if sub.method_calls != method.method_calls && method.args != sub.args{
+                    params.extend(self.get_method_params(&sub, app_data));
+                }
             } else {
                 println!(
                     "WARNING: no details found for {} in controller {}",

@@ -50,7 +50,7 @@ impl Request {
             .controllers
             .get(&self.controller.to_case(Case::Pascal))
         {
-            let mut params: HashSet<String>;
+            let mut params: HashSet<String> = HashSet::new();
             // handle action
             if let Some(method) = controller.get_method_by_name(&self.action, app_data) {
                 params = controller.get_method_params(&method, app_data);
