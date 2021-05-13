@@ -350,14 +350,8 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
     };
 
     let mut route_path = root.clone();
-    route_path.push("config");
-    route_path.push("routes.rb");
-    let routes = parse_routes(
-        Parser::new(&fs::read(route_path)?, Default::default())
-            .do_parse()
-            .ast
-            .unwrap(),
-    );
+    route_path.push("test.routes");
+    let routes = parse_routes(&fs::read_to_string(route_path)?);
     println!("Routes {:?}", routes);
 
     let mut app_dir = root.clone();

@@ -1,0 +1,3 @@
+         Prefix Verb    URI Pattern                                                                                       Controller#Action
+                             GET     /pages/index(.:format)                                                                        pages_controller#index
+                             GET     /blog/:cat/pages/index(.:format)                                                                            pages_controller#index
