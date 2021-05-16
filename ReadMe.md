@@ -10,13 +10,58 @@
 - checking out the AST/strange ruby syntax: https://lib-ruby-parser.github.io/wasm-bindings/
 - write lots of unit tests for strange edge cases
 - `cargo test -- <mod name of the tests you want to run>` e.g. `cargo test -- routes_parsing`
+
 # tasks:
-- parasing params
-    - index
-    - send 
-    - test cases for all the edge cases
-- hooking up the controller includes and parent class together nicely 
-    - allowing a second parse to know about all the functions/methods that should be available
+Views:
+- failing jbuilder tests
+- jbuilder string vec to json 
+- jb parsing (in theory if jbuilder works should be a lot easier and simpler to do...)
+- handling loading in partials
+- (advanced) - parse `schema.rb` to add guess work types to the json objects
+
+Routes:
+- routes parse to `routes.rb` instead of parsing the output of `bundle exec rails r routes > test.routes`
+
+Testing:
+- integeration tests
+    - does our example code actually boot a rails app?
+    - controllers in modules - do we handle parsing them properly
+    - recursive method
+
+File type
+- module actions
+- custom actions - how are we going to handle these
+- concerns `included`
+- caching - does this make things faster on avergage??
+    - build up object of Application controllers so they don't have to be cached each time
+
+Method details parser:
+- parse method calls better e.g. `User.where().foobar()` -> `["where", "foobar"]` and in this case we just want `[""]`
+- headers and cookies
+- params.keys?
+- what does the method return? last statement in the body of the method
+    - this shouldn't be that important except for the edge case of:
+    ```ruby
+    class PagesController < ApplicationController
+        def index
+            extract_params(handle_params(params))
+        end
+
+        def handle_params(p)
+            return error unless p[:magic_token]
+            p
+        end
+
+        def extract_params(p)
+            p[:id]
+        end
+    end
+
+    ```
+    However this does also have the edge case we don't currently handle of params being passed in as an argument...
+
+Open api / swagger
+- format output into common format
 
 # future work:
 Method details stores a hash map of every time a local varaible is accessed, therefore we can do:
@@ -29,7 +74,9 @@ for (k, v) in &local_varaibles {
 ```
 (side note: this pretty much comes for free as the parser handles this for us)
 
-# Goal:
+# Example:
+
+This currently works, including basic .jbuilder support. Parsing routes file is done through parsing the output of `bundle exec rails r routes > test.routes` though for now.
 
 ```ruby
 
@@ -85,25 +132,3 @@ for (k, v) in &local_varaibles {
 By running our script to get the output:
 - pages/index takes auth_token, index, user_id,cat
 - blog/:cat/pages/index takes auth_token, index, user_id,cat
-
-
-
-
-- controller stuff 99%
-- routes - I'll sort 
-
-pages/index
-
-call index - what methods does this call? do any these methods use params?
-
-method_details.methods_calls and .params
-
-Stretch goal: foobar(params)
-
-pages/index
-{
-    id,
-    title,
-    description,
-    ?read_count
-}
