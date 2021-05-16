@@ -25,6 +25,7 @@ Routes:
 Testing:
 - integeration tests
     - does our example code actually boot a rails app?
+    - can we have our example code being an actual test? - or at least add tests around the look up code
     - controllers in modules - do we handle parsing them properly
     - recursive method
 
