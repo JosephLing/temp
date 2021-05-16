@@ -1,18 +1,10 @@
 use lib_ruby_parser::Node;
 
-pub fn parse_optional_name(node: &Option<Box<Node>>) -> String {
-    if let Some(n) = node {
-        parse_name((*n).clone())
-    } else {
-        "".to_owned()
-    }
-}
-
 pub fn parse_node_str(node: &Node) -> String {
     match node {
         Node::Send(stat) => {
             if stat.args.is_empty() && stat.recv.is_none() {
-                return stat.method_name.clone();
+                stat.method_name.clone()
             } else {
                 "unknown".to_string()
             }
@@ -23,7 +15,7 @@ pub fn parse_node_str(node: &Node) -> String {
         Node::Int(int) => int.value.clone(),
         Node::Array(array) => {
             if array.elements.is_empty() {
-                return "[]".to_owned();
+                "[]".to_owned()
             } else {
                 format!(
                     "[{}]",
@@ -38,7 +30,7 @@ pub fn parse_node_str(node: &Node) -> String {
         }
         Node::Hash(hash) => {
             if hash.pairs.is_empty() {
-                return "{}".to_owned();
+                "{}".to_owned()
             } else {
                 format!(
                     "{{{}}}",
@@ -50,7 +42,7 @@ pub fn parse_node_str(node: &Node) -> String {
                 )
             }
         }
-        Node::Nil(nil) => "nil".to_owned(),
+        Node::Nil(_) => "nil".to_owned(),
         Node::Kwargs(kwargs) => kwargs
             .pairs
             .iter()
@@ -94,13 +86,13 @@ pub fn parse_node_str(node: &Node) -> String {
     }
 }
 
-pub fn parse_name(node: Box<Node>) -> String {
-    parse_node_str(&*node)
+pub fn parse_name(node: Node) -> String {
+    parse_node_str(&node)
 }
 
 pub fn parse_superclass(node: Option<Box<Node>>) -> String {
     if let Some(boxed_node) = node {
-        parse_name(boxed_node)
+        parse_node_str(&*boxed_node)
     } else {
         "".to_string()
     }

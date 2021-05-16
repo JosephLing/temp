@@ -5,12 +5,12 @@ use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]
 pub enum RequestMethod {
-    GET,
-    POST,
-    DELETE,
-    PUT,
-    PATCH,
-    OPTIONS,
+    Get,
+    Post,
+    Delete,
+    Put,
+    Patch,
+    Options,
 }
 
 impl FromStr for RequestMethod {
@@ -18,13 +18,13 @@ impl FromStr for RequestMethod {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "GET" => RequestMethod::GET,
-            "POST" => RequestMethod::POST,
-            "DELETE" => RequestMethod::DELETE,
-            "PUT" => RequestMethod::PUT,
-            "PATCH" => RequestMethod::PATCH,
-            "OPTIONS" => RequestMethod::OPTIONS,
-            _ => Err(format!("unknown Request method '{}'", s.clone()))?,
+            "GET" => RequestMethod::Get,
+            "POST" => RequestMethod::Post,
+            "DELETE" => RequestMethod::Delete,
+            "PUT" => RequestMethod::Put,
+            "PATCH" => RequestMethod::Patch,
+            "OPTIONS" => RequestMethod::Options,
+            _ => return Err(format!("unknown Request method '{}'", &(*s).to_owned())),
         })
     }
 }
@@ -50,14 +50,16 @@ impl Request {
             .controllers
             .get(&self.controller.to_case(Case::Pascal))
         {
-            let mut params: HashSet<String> = HashSet::new();
+            let mut params: HashSet<String>;
             // handle action
             if let Some(method) = controller.get_method_by_name(&self.action, app_data) {
                 params = controller.get_method_params(&method, app_data);
             } else {
                 return Err(format!(
                     "ERROR: action {} not found in controller {} for request {}",
-                    self.action, &self.controller.to_case(Case::Pascal), self.uri
+                    self.action,
+                    &self.controller.to_case(Case::Pascal),
+                    self.uri
                 ));
             }
             // handle before/after/rescue
@@ -67,23 +69,31 @@ impl Request {
                 } else {
                     return Err(format!(
                         "ERROR: action {} not found in controller {} for request {}",
-                        self.action, &self.controller.to_case(Case::Pascal), self.uri
+                        self.action,
+                        &self.controller.to_case(Case::Pascal),
+                        self.uri
                     ));
                 }
             }
-            return Ok(params);
+
+            Ok(params)
         } else {
-            return Err(format!(
+            Err(format!(
                 "ERROR: action {} not found in controller {} for request {}",
-                self.action, &self.controller.to_case(Case::Pascal), self.uri
-            ));
+                self.action,
+                &self.controller.to_case(Case::Pascal),
+                self.uri
+            ))
         }
     }
 
-    pub fn get_view(&self, app_data: &AppData) -> Result<String, String>{
-        if let Some(actions) = app_data.views.get(self.controller.trim_end_matches("_controller")){
-            if let Some(view) = actions.get(&self.action){
-                return Ok(view.response.join(","))
+    pub fn get_view(&self, app_data: &AppData) -> Result<String, String> {
+        if let Some(actions) = app_data
+            .views
+            .get(self.controller.trim_end_matches("_controller"))
+        {
+            if let Some(view) = actions.get(&self.action) {
+                return Ok(view.response.join(","));
             }
         }
         Err("not found".to_string())
@@ -95,7 +105,7 @@ pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {
         Err("input is empty".to_string())
     } else {
         let mut routes = Vec::new();
-        let foo: Vec<Vec<String>> = input
+        let lines: Vec<Vec<String>> = input
             .lines()
             .skip(1)
             .into_iter()
@@ -108,60 +118,60 @@ pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {
             .collect();
 
         // this ugly mess is grabbing the valid feilds but ignoring the last one if an extra resource thing is added on to the end as I don't know what it does
-        for i in 0..foo.len() {
-            if foo[i].len() == 5 {
-            } else if foo[i].len() == 4 {
-                if let Ok(temp2) = RequestMethod::from_str(&foo[i][0]) {
-                    let temp = foo[i][2].split("#").collect::<Vec<&str>>();
+        for line in &lines {
+            if line.len() == 5 {
+            } else if line.len() == 4 {
+                if let Ok(temp2) = RequestMethod::from_str(&line[0]) {
+                    let temp = line[2].split('#').collect::<Vec<&str>>();
                     if temp.len() != 2 {
-                        Err(format!(
+                        return Err(format!(
                             "could not find action on the contorller {}",
-                            foo[i][2]
-                        ))?;
+                            line[2]
+                        ));
                     }
 
                     routes.push(Request {
                         method: temp2,
                         prefix: "".to_string(),
-                        uri: foo[i][1].replace("(.:format)", ""),
+                        uri: line[1].replace("(.:format)", ""),
                         controller: temp[0].to_string() + "_controller",
                         action: temp[1].to_string(),
                     })
                 } else {
-                    let temp = foo[i][3].split("#").collect::<Vec<&str>>();
+                    let temp = line[3].split('#').collect::<Vec<&str>>();
                     if temp.len() != 2 {
-                        Err(format!(
+                        return Err(format!(
                             "could not find action on the contorller {}",
-                            foo[i][3]
-                        ))?;
+                            line[3]
+                        ));
                     }
 
                     routes.push(Request {
-                        method: RequestMethod::from_str(&foo[i][1])?,
-                        prefix: foo[i][0].clone(),
-                        uri: foo[i][2].replace("(.:format)", ""),
+                        method: RequestMethod::from_str(&line[1])?,
+                        prefix: line[0].clone(),
+                        uri: line[2].replace("(.:format)", ""),
                         controller: temp[0].to_string() + "_controller",
                         action: temp[1].to_string(),
                     })
                 }
-            } else if foo[i].len() == 3 {
-                let temp = foo[i][2].split("#").collect::<Vec<&str>>();
+            } else if line.len() == 3 {
+                let temp = line[2].split('#').collect::<Vec<&str>>();
                 if temp.len() != 2 {
-                    Err(format!(
+                    return Err(format!(
                         "could not find action on the contorller {}",
-                        foo[i][2]
-                    ))?;
+                        line[2]
+                    ));
                 }
 
                 routes.push(Request {
-                    method: RequestMethod::from_str(&foo[i][0])?,
+                    method: RequestMethod::from_str(&line[0])?,
                     prefix: "".to_string(),
-                    uri: foo[i][1].replace("(.:format)", ""),
+                    uri: line[1].replace("(.:format)", ""),
                     controller: temp[0].to_string() + "_controller",
                     action: temp[1].to_string(),
                 })
             } else {
-                println!("panic {:?}", foo[i]);
+                println!("panic {:?}", line);
             }
         }
 
@@ -193,7 +203,7 @@ mod routes_parsing {
         assert_eq!(
             parse_routes(input).unwrap()[0],
             Request {
-                method: RequestMethod::POST,
+                method: RequestMethod::Post,
                 prefix: "email_processor".to_string(),
                 uri: "/email_processor".to_string(),
                 controller: "griddler/emails_controller".to_string(),
@@ -204,7 +214,7 @@ mod routes_parsing {
         assert_eq!(
             parse_routes(input).unwrap()[2],
             Request {
-                method: RequestMethod::PATCH,
+                method: RequestMethod::Patch,
                 prefix: "".to_string(),
                 uri: "/dog/form".to_string(),
                 controller: "dog_forms_controller".to_string(),

@@ -1,5 +1,4 @@
 use std::{
-    clone,
     collections::{HashMap, VecDeque},
     fs,
     path::Path,
@@ -52,10 +51,10 @@ fn parse_jbuiler_nodes(node: &Node, optional: bool, parent: &str) -> Vec<String>
             }
             Node::If(stat) => {
                 stat.if_true.iter().for_each(|b| {
-                    results.append(&mut parse_jbuiler_nodes(b, true, parent.clone()))
+                    results.append(&mut parse_jbuiler_nodes(b, true, &(*parent).to_owned()))
                 });
                 stat.if_false.iter().for_each(|a| {
-                    results.append(&mut parse_jbuiler_nodes(a, false, parent.clone()))
+                    results.append(&mut parse_jbuiler_nodes(a, false, &(*parent).to_owned()))
                 });
             }
             Node::Send(stat) => {
@@ -66,25 +65,20 @@ fn parse_jbuiler_nodes(node: &Node, optional: bool, parent: &str) -> Vec<String>
                         let temp = utils::parse_node_str(arg);
                         if temp == "unknown" {
                             buf.push_back(arg);
+                        } else if parent.is_empty() {
+                            results.push(format!("{}{}", prefix, &temp));
                         } else {
-                            if parent.is_empty() {
-                                results.push(format!("{}{}", prefix, &temp));
-                            } else {
-                                results.push(format!("{}.{}{}", parent, prefix, &temp));
-                            }
+                            results.push(format!("{}.{}{}", parent, prefix, &temp));
                         }
                     }
                 }
                 if let Some(recv) = stat.recv.clone() {
                     if let Node::Send(is_json) = *recv.clone() {
-                        if is_json.method_name == "json" {
-                            if stat.method_name != "call" {
-                                if parent.is_empty() {
-                                    results.push(format!("{}{}", prefix, stat.method_name));
-                                } else {
-                                    results
-                                        .push(format!("{}.{}{}", parent, prefix, stat.method_name));
-                                }
+                        if is_json.method_name == "json" && stat.method_name != "call" {
+                            if parent.is_empty() {
+                                results.push(format!("{}{}", prefix, stat.method_name));
+                            } else {
+                                results.push(format!("{}.{}{}", parent, prefix, stat.method_name));
                             }
                         }
                     } else {
@@ -112,9 +106,7 @@ fn parse_jbuiler_nodes(node: &Node, optional: bool, parent: &str) -> Vec<String>
             Node::Args(args) => args.args.iter().for_each(|f| buf.push_back(f)),
             Node::Ivar(_) => {}
             // conditional send e.g. foo&.id
-            Node::CSend(_) => {
-                println!("")
-            }
+            Node::CSend(_) => {}
             _ => {
                 // panic!("{:?}", temp);
             }
@@ -145,7 +137,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
         .to_str()
-        .map(|s| s.starts_with("."))
+        .map(|s| s.starts_with('.'))
         .unwrap_or(false)
 }
 
@@ -166,18 +158,18 @@ pub fn parse_view_files(
                 .unwrap()
                 .display()
                 .to_string()
-                .split("/")
+                .split('/')
                 .last()
                 .unwrap()
                 .to_string();
             let action = f
                 .display()
                 .to_string()
-                .split("/")
+                .split('/')
                 .last()
                 .unwrap()
                 .to_string();
-            let views_controller = views.entry(controller.clone()).or_insert(HashMap::new());
+            let views_controller = views.entry(controller.clone()).or_insert_with(HashMap::new);
             let parser = Parser::new(&fs::read(entry.path())?, Default::default()).do_parse();
 
             if action.ends_with(".jbuilder") {

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use argh::FromArgs;
 use rts::compute;
 
-fn debug_default() -> bool{
+fn debug_default() -> bool {
     false
 }
 
@@ -13,9 +13,9 @@ struct RtsCmd {
     /// directory of the ruby on rails project
     #[argh(positional)]
     root: PathBuf,
-    
+
     /// turn on debug mode
-    #[argh(option, default="debug_default()")]
+    #[argh(option, default = "debug_default()")]
     debug: bool,
 }
 
@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if cmd.debug {
         println!("--- Controllers ---");
-        for (_, con) in &app_data.controllers {
+        for con in app_data.controllers.values() {
             println!("[{:?}] {} < {}", con.module, con.name, con.parent);
             for include in &con.include {
                 println!("#include {}", include);
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         println!("--- Helpers ---");
-        for (_, hel) in &app_data.helpers {
+        for hel in app_data.helpers.values() {
             println!("{}", hel.name);
             for method in &hel.methods {
                 println!("- {}", method.name);
@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         println!("--- Concerns ---");
-        for (_, con) in &app_data.concerns {
+        for con in app_data.concerns.values() {
             println!("{}", con.name);
             for method in &con.methods {
                 println!("- {}", method.name);
@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("--- Routes ---");
-    for (_, route) in &app_data.routes {
+    for route in app_data.routes.values() {
         println!("{}", route);
         print!("@ params = ");
         match route.get_params(&app_data) {
@@ -80,13 +80,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(err) => println!("{}", err),
         }
 
-        match route.get_view(&app_data) {
-            Ok(p) => println!("Response: {:?}", p),
-            Err(err) => {},
+        if let Ok(p) = route.get_view(&app_data) {
+            println!("Response: {:?}", p)
         }
     }
-
-   
 
     Ok(())
 }

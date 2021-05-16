@@ -1,6 +1,6 @@
 use super::types::MethodDetails;
 
-use crate::utils::{self, parse_node_str, parse_optional_name};
+use crate::utils::{self, parse_node_str};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use lib_ruby_parser::{
@@ -114,10 +114,10 @@ pub fn create_method_details(
         "params",
         "to_json",
         "warn",
-        "touch!"
+        "touch!",
     ];
     let mut params = HashSet::new();
-    let mut headers: Vec<(String, String)> = Vec::new();
+    let headers: Vec<(String, String)> = Vec::new();
     let mut instance_varaibles: HashSet<String> = HashSet::new();
     let mut method_calls: Vec<(String, Vec<String>)> = Vec::new();
     let mut local_varaibles: HashMap<String, usize> = HashMap::new();
@@ -228,17 +228,18 @@ pub fn create_method_details(
             Node::IndexAsgn(stat) => {
                 if let Node::Send(send) = *stat.recv {
                     if send.method_name == "headers" {
-                        for index in stat.indexes {
-                            match index {
-                                Node::Str(value) => {
-                                    headers.push((
-                                        value.value.to_string_lossy(),
-                                        parse_optional_name(&stat.value),
-                                    ));
-                                }
-                                _ => {}
-                            }
-                        }
+                        // TODO: work out what to do with headers!
+                        // for index in stat.indexes {
+                        //     match index {
+                        //         Node::Str(value) => {
+                        //             headers.push((
+                        //                 value.value.to_string_lossy(),
+                        //                 parse_optional_name(&stat.value),
+                        //             ));
+                        //         }
+                        //         _ => {}
+                        //     }
+                        // }
                     } else {
                         handle_vector_of_nodes(send.args, &mut buf);
                         handle_optional_node(&send.recv, &mut buf);
@@ -390,8 +391,8 @@ pub fn create_method_details(
                     for value in stat.args {
                         params.insert(utils::parse_node_str(&value));
                     }
-                    if let Some(foo) = stat.recv {
-                        if let Node::Send(stat) = *foo {
+                    if let Some(recv) = stat.recv {
+                        if let Node::Send(stat) = *recv {
                             for value in stat.args {
                                 params.insert(utils::parse_node_str(&value));
                             }
@@ -478,29 +479,26 @@ fn parse_send(stat: nodes::Send) -> SendTypes {
         let mut buf = VecDeque::new();
         buf.push_back(*temp);
         while let Some(temp) = buf.pop_front() {
-            match temp {
-                Node::Send(stat) => {
-                    if stat.method_name == "require" {
-                        if permit {
-                            require = true;
-                        } else {
-                            return SendTypes::Invalid;
-                        }
-                    } else if stat.method_name == "permit" {
-                        if require {
-                            return SendTypes::Invalid;
-                        }
-                        permit = true;
-                    } else if stat.method_name == "params" {
-                        params = true;
+            if let Node::Send(stat) = temp {
+                if stat.method_name == "require" {
+                    if permit {
+                        require = true;
                     } else {
                         return SendTypes::Invalid;
                     }
-                    if let Some(recv) = stat.recv {
-                        buf.push_back(*recv);
+                } else if stat.method_name == "permit" {
+                    if require {
+                        return SendTypes::Invalid;
                     }
+                    permit = true;
+                } else if stat.method_name == "params" {
+                    params = true;
+                } else {
+                    return SendTypes::Invalid;
                 }
-                _ => {}
+                if let Some(recv) = stat.recv {
+                    buf.push_back(*recv);
+                }
             }
         }
     }
@@ -545,7 +543,7 @@ fn params_index(stat: Index) -> Option<Vec<String>> {
             }
             _ => {
                 let value = parse_node_str(&temp);
-                if value != "unknown".to_owned() {
+                if value != "unknown" {
                     data.push(value);
                 }
             }
@@ -599,14 +597,6 @@ mod params_tests {
         return results.join(", ");
     }
 
-    fn header_helper(input: &str) -> String {
-        let temp = helper(input);
-        // println!("{:#?}", *temp);
-        let mut results = create_method_details(temp, "".to_string(), Vec::new()).headers;
-        results.sort();
-        return format!("{:?}", results);
-    }
-
     #[test]
     fn send_method() {
         assert_eq!(param_helper("render 'show'"), "");
@@ -634,7 +624,7 @@ mod params_tests {
 
     #[test]
     fn params_double_index_string() {
-        /**
+        /*
            index
                - index
            - value

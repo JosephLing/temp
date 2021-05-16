@@ -9,7 +9,7 @@ use types::{ActionKinds, AppData, Concern, Controller, HelperModule, MethodDetai
 use std::{
     collections::{HashMap, VecDeque},
     fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use lib_ruby_parser::{
@@ -34,7 +34,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
         .to_str()
-        .map(|s| s.starts_with("."))
+        .map(|s| s.starts_with('.'))
         .unwrap_or(false)
 }
 
@@ -79,7 +79,7 @@ fn parse_actions(send_thing: Send, actions: &mut Vec<(ActionKinds, String)>) {
 }
 
 fn parse_class(class: Class, module: String) -> Result<File, String> {
-    let name = parse_name(class.name);
+    let name = parse_name(*class.name);
     let superclass = parse_superclass(class.superclass);
     if superclass.is_empty() {
         Err("single file classes not supported".to_string())
@@ -105,7 +105,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                 "include" => {
                                     for arg in &send_thing.args {
                                         let temp = utils::parse_node_str(arg);
-                                        if !temp.starts_with("ActionController"){
+                                        if !temp.starts_with("ActionController") {
                                             includes.push(temp);
                                         }
                                     }
@@ -128,7 +128,7 @@ fn parse_class(class: Class, module: String) -> Result<File, String> {
                                     &mut methods,
                                 );
                             }
-                            Node::Casgn(stat) => {
+                            Node::Casgn(_) => {
                                 // END_USER_ALLOWED_SETTINGS
                             }
                             _ => {
@@ -187,7 +187,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                 if let Some(body) = module.body {
                     buf.push_back(*body);
                 }
-                module_names.push_back(module_name.clone() + &parse_name(module.name));
+                module_names.push_back(module_name.clone() + &parse_name(*module.name));
             }
             Node::Def(stat) => {
                 let mut methods = Vec::new();
@@ -217,30 +217,34 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                             if let Some(body) = module.body {
                                 buf.push_back(*body);
                             }
-                            module_names.push_back(module_name.clone() + &parse_name(module.name));
+                            module_names.push_back(module_name.clone() + &parse_name(*module.name));
                         }
                         Node::Class(class) => {
                             files.push(parse_class(class, module_name.clone())?);
                         }
                         Node::Send(send) => {
-                            if send.method_name == "require" {
-                                // TODO: no validation but keeping track of how dependencies are used, would be useful
-                            }
-                            // ignoring visibility for now
-                            else if send.method_name == "private" {
-                            } else if send.method_name == "private_class_method" {
-                                // do nothing
-                            } else if send.method_name == "extend" {
-                                for arg in &send.args {
-                                    if get_node_name(&arg)? == "ActiveSupport::Concern" {
+                            match send.method_name.as_str() {
+                                "extend" => {
+                                    if send.args.len() == 1
+                                        && get_node_name(&send.args[0])? == "ActiveSupport::Concern"
+                                    {
                                         concern_found = true;
                                         break;
                                     } else {
                                         return Err("unsupported 'extend' found".to_owned());
                                     }
                                 }
-                            } else {
-                                return Err(format!("unexpected 'send' in file {:?}", send));
+
+                                //TODO: require
+                                "require" => {}
+                                "private" => {}
+                                "private_class_method" => {
+                                    // TODOD: check if the method is an arg for this!!!
+                                }
+
+                                _ => {
+                                    return Err(format!("unexpected 'send' in file {:?}", send));
+                                }
                             }
                         }
                         Node::Casgn(_) => {}
@@ -263,12 +267,9 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                                 }
                                 if let Node::Send(stat) = *block.call {
                                     if stat.method_name == "included" {
-                                        for arg in block.args {
-                                            match *arg {
-                                                Node::Send(action_stat) => {
-                                                    parse_actions(action_stat, &mut actions)
-                                                }
-                                                _ => {}
+                                        if let Some(arg) = block.args {
+                                            if let Node::Send(action_stat) = *arg {
+                                                parse_actions(action_stat, &mut actions)
                                             }
                                         }
                                     } else {
@@ -297,7 +298,7 @@ fn parse_file(node: Node) -> Result<Vec<File>, String> {
                 if helper_found {
                     files.push(File::Module(HelperModule {
                         name: module_name.clone(),
-                        methods: methods,
+                        methods,
                     }));
                 } else if concern_found {
                     files.push(File::Concern(Concern {
@@ -389,8 +390,8 @@ fn parse_files(
     Ok(())
 }
 
-pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
-    let mut route_path = root.clone();
+pub fn compute(root: &Path) -> Result<AppData, Box<dyn std::error::Error>> {
+    let mut route_path = root.to_path_buf();
     route_path.push("test.routes");
 
     let mut routes: HashMap<String, Request> = HashMap::new();
@@ -406,7 +407,7 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
         views: HashMap::new(),
     };
 
-    let mut app_dir = root.clone();
+    let mut app_dir = root.to_path_buf();
     app_dir.push("app");
 
     let mut helpers_path = app_dir.clone();
@@ -415,7 +416,7 @@ pub fn compute(root: &PathBuf) -> Result<AppData, Box<dyn std::error::Error>> {
     let mut controllers_path = app_dir.clone();
     controllers_path.push("controllers");
 
-    let mut view_path = app_dir.clone();
+    let mut view_path = app_dir;
     view_path.push("views");
 
     parse_files(

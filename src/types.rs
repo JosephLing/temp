@@ -1,5 +1,5 @@
 use crate::routes::Request;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDetails {
@@ -72,7 +72,7 @@ pub struct View {
 
 impl Controller {
     pub fn get_own_methods(&self) -> Vec<MethodDetails> {
-        return self.methods.clone();
+        self.methods.clone()
     }
 
     pub fn get_inherited_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
@@ -86,32 +86,30 @@ impl Controller {
         let mut methods: Vec<MethodDetails> = Vec::new();
         for included in &self.include {
             let mut include_found = false;
-            match app_data.concerns.get(included) {
-                Some(con) => {
-                    methods.append(&mut con.methods.clone());
-                    include_found = true;
-                }
-                None => {}
+            if let Some(con) = app_data.concerns.get(included) {
+                methods.append(&mut con.methods.clone());
+                include_found = true;
             }
-            match app_data.helpers.get(included) {
-                Some(hel) => {
-                    methods.append(&mut hel.methods.clone());
-                    include_found = true;
-                }
-                None => {}
+
+            if let Some(hel) = app_data.helpers.get(included) {
+                methods.append(&mut hel.methods.clone());
+                include_found = true;
             }
+
             if !include_found {
                 println!("WARNING: Include {} not found for {}", included, self.name);
             }
         }
-        return methods;
+
+        methods
     }
 
     pub fn get_all_methods(&self, app_data: &AppData) -> Vec<MethodDetails> {
         let mut methods = self.get_own_methods();
         methods.append(&mut self.get_inherited_methods(app_data));
         methods.append(&mut self.get_included_methods(app_data));
-        return methods;
+
+        methods
     }
 
     pub fn get_method_by_name(&self, name: &str, app_data: &AppData) -> Option<MethodDetails> {
@@ -120,21 +118,22 @@ impl Controller {
                 return Some(method);
             }
         }
-        return None;
+
+        None
     }
 
     pub fn get_method_params(&self, method: &MethodDetails, app_data: &AppData) -> HashSet<String> {
         let mut params = method.params.clone();
         for (sub_name, _) in &method.method_calls {
             if let Some(sub) = self.get_method_by_name(sub_name, app_data) {
-                // Currently we can't distinguish between 
+                // Currently we can't distinguish between
                 //   def has_permission?(permission)
                 //     @user.has_permission?(permission)
                 //   end
-                if sub.method_calls != method.method_calls && method.args != sub.args{
+                if sub.method_calls != method.method_calls && method.args != sub.args {
                     params.extend(self.get_method_params(&sub, app_data));
                 }
-            } 
+            }
             // else {
             //     println!(
             //         "WARNING: no details found for {} in controller {}",
@@ -142,6 +141,7 @@ impl Controller {
             //     );
             // }
         }
-        return params;
+
+        params
     }
 }
