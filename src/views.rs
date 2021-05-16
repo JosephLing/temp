@@ -297,4 +297,24 @@ mod views_tests {
 
         assert_eq!(helper(input), ["admin".to_owned()]);
     }
+
+    #[test]
+    fn array_exclamation_point() {
+        let input = "
+        json.array! @accounts do |a|
+            json.(a, :id, :display_name, :name, :last_seen, :status)
+        end
+        ";
+
+        assert_eq!(helper(input), ["[id]", "[display_name]", "[name]", "[last_name]", "[status]"]);
+    }
+
+    #[test]
+    fn partial() {
+        let input = "
+        json.partial! 'comments/comment', comment: @comment
+        ";
+        todo!("return type hmmm or a string for the vector, I guess it will have to be some kinda string in the vec so we can get the position in the json correct");
+        assert_eq!(helper(input), ["admin".to_owned()]);
+    }
 }
