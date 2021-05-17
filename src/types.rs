@@ -23,6 +23,28 @@ pub enum ActionKinds {
     Custom(String),
 }
 
+trait Scope{
+    fn name(&self) -> &str;
+    fn get_methods(&self) -> &Vec<MethodDetails>;
+    fn get_actions(&self) -> &Vec<(ActionKinds, String)>; 
+    fn get_requires(&self) -> &Vec<String>; 
+}
+
+struct AppScope{
+    // todo: does it have to be Box'd
+    // todo: how do we handle the use of modules 
+    /*
+    module Internal
+        class PagesController < ApplicationController
+
+        end
+    end
+
+
+    */
+    pub files: HashMap<String, Box<dyn Scope>>
+}
+
 #[derive(Debug)]
 pub struct Controller {
     pub name: String,

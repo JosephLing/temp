@@ -422,6 +422,7 @@ pub fn compute(root: &Path) -> Result<AppData, Box<dyn std::error::Error>> {
     let mut view_path = app_dir;
     view_path.push("views");
 
+    // TODO: have this only take one hashmap thing!
     parse_files(
         &controllers_path,
         &mut app_data.controllers,
