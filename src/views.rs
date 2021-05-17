@@ -306,7 +306,16 @@ mod views_tests {
         end
         ";
 
-        assert_eq!(helper(input), ["[id]", "[display_name]", "[name]", "[last_name]", "[status]"]);
+        assert_eq!(
+            helper(input),
+            [
+                "[id]",
+                "[display_name]",
+                "[name]",
+                "[last_name]",
+                "[status]"
+            ]
+        );
     }
 
     #[test]
