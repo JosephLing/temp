@@ -1,8 +1,22 @@
+/**
+Unsupported routes configuration:
+
+1. resolve (https://guides.rubyonrails.org/routing.html#singular-resources)
+
+```ruby
+resource :geocoder
+resolve('Geocoder') { [:geocoder] }
+```
+
+
+*/
 use crate::types::AppData;
 use convert_case::{Case, Casing};
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::str::FromStr;
 
+use lib_ruby_parser::Node;
 #[derive(Debug, PartialEq)]
 pub enum RequestMethod {
     Get,
@@ -100,126 +114,406 @@ impl Request {
     }
 }
 
-pub fn parse_routes(input: &str) -> Result<Vec<Request>, String> {
-    if input.is_empty() {
-        Err("input is empty".to_string())
-    } else {
-        let mut routes = Vec::new();
-        let lines: Vec<Vec<String>> = input
-            .lines()
-            .skip(1)
-            .into_iter()
-            .map(|f| {
-                f.split_whitespace()
-                    .map(|e| e.to_string())
-                    .filter(|e| !e.is_empty())
-                    .collect()
-            })
-            .collect();
-
-        // this ugly mess is grabbing the valid feilds but ignoring the last one if an extra resource thing is added on to the end as I don't know what it does
-        for line in &lines {
-            if line.len() == 5 {
-            } else if line.len() == 4 {
-                if let Ok(temp2) = RequestMethod::from_str(&line[0]) {
-                    let temp = line[2].split('#').collect::<Vec<&str>>();
-                    if temp.len() != 2 {
-                        return Err(format!(
-                            "could not find action on the contorller {}",
-                            line[2]
-                        ));
-                    }
-
-                    routes.push(Request {
-                        method: temp2,
-                        prefix: "".to_string(),
-                        uri: line[1].replace("(.:format)", ""),
-                        controller: temp[0].to_string() + "_controller",
-                        action: temp[1].to_string(),
-                    })
-                } else {
-                    let temp = line[3].split('#').collect::<Vec<&str>>();
-                    if temp.len() != 2 {
-                        return Err(format!(
-                            "could not find action on the contorller {}",
-                            line[3]
-                        ));
-                    }
-
-                    routes.push(Request {
-                        method: RequestMethod::from_str(&line[1])?,
-                        prefix: line[0].clone(),
-                        uri: line[2].replace("(.:format)", ""),
-                        controller: temp[0].to_string() + "_controller",
-                        action: temp[1].to_string(),
-                    })
-                }
-            } else if line.len() == 3 {
-                let temp = line[2].split('#').collect::<Vec<&str>>();
-                if temp.len() != 2 {
-                    return Err(format!(
-                        "could not find action on the contorller {}",
-                        line[2]
-                    ));
-                }
-
-                routes.push(Request {
-                    method: RequestMethod::from_str(&line[0])?,
-                    prefix: "".to_string(),
-                    uri: line[1].replace("(.:format)", ""),
-                    controller: temp[0].to_string() + "_controller",
-                    action: temp[1].to_string(),
-                })
-            } else {
-                println!("panic {:?}", line);
-            }
-        }
-
-        Ok(routes)
-    }
+pub fn parse_routes(node: &Node) -> Result<Vec<Request>, String> {
+    let mut buf = VecDeque::new();
+    buf.push_back(node);
+    let routes: Vec<Request> = Vec::new();
+    while let Some(temp) = buf.pop_front() {}
+    Err("failed to parse".to_owned())
 }
 
 #[cfg(test)]
 mod routes_parsing {
+    use lib_ruby_parser::Parser;
+
     use super::parse_routes;
     use super::Request;
     use super::RequestMethod;
 
-    #[test]
-    fn parse() {
-        let input = "Prefix Verb    URI Pattern                                                                              Controller#Action
-        email_processor POST    /email_processor(.:format)                                                               griddler/emails#create
-            dog_form GET     /dog/form(.:format)                                                                   dog_forms#show
-                        PATCH   /dog/form(.:format)                                                                   dog_forms#update
-                        PUT     /dog/form(.:format)                                                                   dog_forms#update
-                        POST    /dog/form(.:format)                                                                   dog_forms#create
-          dog_styles GET     /dogs/:dog_id/styles(.:format)                                                     dogs/styles#index
-                        POST    /dogs/:dog_id/styles(.:format)                                                     dogs/styles#create
-       new_dog_style GET     /dogs/:dog_id/styles/new(.:format)                                                 dogs/styles#new
-        ";
+    fn helper(input: &str) -> Box<lib_ruby_parser::Node> {
+        Box::new(
+            Parser::new(input.as_bytes(), Default::default())
+                .do_parse()
+                .ast
+                .unwrap(),
+        )
+    }
 
-        assert_eq!(parse_routes(input).is_ok(), true, "successfully parse");
-        assert_eq!(parse_routes(input).unwrap().len(), 8);
+    #[test]
+    fn basic_parse() {
+        let input = "
+        Rails.application.routes.draw do
+            get '/accounts/tags' => 'tags#index'
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 1);
         assert_eq!(
-            parse_routes(input).unwrap()[0],
+            result[0],
             Request {
                 method: RequestMethod::Post,
-                prefix: "email_processor".to_string(),
-                uri: "/email_processor".to_string(),
-                controller: "griddler/emails_controller".to_string(),
-                action: "create".to_string(),
-            }
-        );
-
-        assert_eq!(
-            parse_routes(input).unwrap()[2],
-            Request {
-                method: RequestMethod::Patch,
                 prefix: "".to_string(),
-                uri: "/dog/form".to_string(),
-                controller: "dog_forms_controller".to_string(),
-                action: "update".to_string(),
+                action: "index".to_string(),
+                uri: "".to_owned(),
+                controller: "tags".to_owned()
             }
         );
+    }
+
+    #[test]
+    fn seperate_action_and_controller() {
+        let input = "
+        Rails.application.routes.draw do
+            get 'profile', action: :show, controller: 'users'
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result[0],
+            Request {
+                method: RequestMethod::Post,
+                prefix: "".to_string(),
+                action: "show".to_string(),
+                uri: "".to_owned(),
+                controller: "users".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn parse_hash_controller_action() {
+        let input = "
+        Rails.application.routes.draw do
+            get 'profile', to: 'users#show'
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result[0],
+            Request {
+                method: RequestMethod::Post,
+                prefix: "".to_string(),
+                action: "show".to_string(),
+                uri: "".to_owned(),
+                controller: "users".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn griddler() {
+        let input = "
+        Rails.application.routes.draw do
+            mount_griddler
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn no_routes() {
+        let input = "
+        Rails.application.routes.draw do
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn no_routes_draw_found() {
+        let input = "
+        Rails.application.routes.draw do
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(
+            result.is_err(),
+            true,
+            "threw some kind of error if no `Rails.application.routes.draw do` is found"
+        );
+    }
+
+    #[test]
+    fn basic_resources() {
+        // https://guides.rubyonrails.org/routing.html#crud-verbs-and-actions
+        // Rails routes are matched in the order they are specified,
+        // so if you have a resources :photos above a get 'photos/poll' the show action's route for the resources line
+        // will be matched before the get line.
+        // To fix this, move the get line above the resources line so that it is matched first.
+
+        // TODO: consider how rousource helpers will be considered as they expose stuff like:
+        // resources :photos
+        // photos_path -> /photos
+        // new_photos_path -> /photos/new
+        // etc.
+
+        let input = "
+        Rails.application.routes.draw do
+            resources :photos
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 6);
+    }
+
+    #[test]
+    fn multiple_resources_in_a_given_line() {
+        let input = "
+        Rails.application.routes.draw do
+            resources :photos, :books
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 12);
+    }
+
+    #[test]
+    fn namespaces() {
+        // https://guides.rubyonrails.org/routing.html#controller-namespaces-and-routing
+        let input = "
+        Rails.application.routes.draw do
+            namespace :admin do
+                resources :articles, :comments
+            end
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 12);
+    }
+
+    #[test]
+    fn scope_with_module() {
+        // https://guides.rubyonrails.org/routing.html#controller-namespaces-and-routing
+        let input = "
+        Rails.application.routes.draw do
+            scope module: 'admin' do
+                resources :articles, :comments
+            end
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 12);
+    }
+
+    #[test]
+    fn resources_with_module() {
+        // https://guides.rubyonrails.org/routing.html#controller-namespaces-and-routing
+        let input = "
+        Rails.application.routes.draw do
+           resources :articles, module: 'admin'
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 6);
+    }
+
+    #[test]
+    fn scope_without_module() {
+        // https://guides.rubyonrails.org/routing.html#controller-namespaces-and-routing
+        let input = "
+        Rails.application.routes.draw do
+            scope '/admin' do
+                resources :articles, :comments
+            end
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 12);
+    }
+
+    #[test]
+    fn resources_with_path() {
+        // https://guides.rubyonrails.org/routing.html#controller-namespaces-and-routing
+        let input = "
+        Rails.application.routes.draw do
+            resources :articles, path: '/admin/articles'
+        end
+        ";
+        let result = parse_routes(&helper(input));
+        assert_eq!(result.is_ok(), true, "parsed okay");
+
+        let result = result.unwrap();
+        assert_eq!(result.len(), 12);
+    }
+
+    mod resources {
+        // https://api.rubyonrails.org/v6.1.3.2/classes/ActionDispatch/Routing/Mapper/Resources.html#method-i-resources
+        use super::*;
+
+        #[test]
+        fn resources_nested() {
+            // https://guides.rubyonrails.org/routing.html#nested-resources
+            let input = "
+        Rails.application.routes.draw do
+            resources :magazines do
+                resources :ads
+            end
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
+
+        #[test]
+        fn only_index_new_create() {
+            // https://guides.rubyonrails.org/routing.html#nested-resources
+            let input = "
+        Rails.application.routes.draw do
+            resources :comments, only: [:index, :new, :create]
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 3);
+        }
+
+        #[test]
+        fn only_show_edit_update_destroy() {
+            // https://guides.rubyonrails.org/routing.html#nested-resources
+            let input = "
+        Rails.application.routes.draw do
+            resources :comments, only: [:show, :edit, :update, :destroy]
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
+
+        #[test]
+        fn shallow_on_child() {
+            // https://guides.rubyonrails.org/routing.html#shallow-nesting
+            let input = "
+        Rails.application.routes.draw do
+            resources :articles do
+                resources :comments, shallow: true
+            end
+      
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
+
+        #[test]
+        fn shallow_on_parent() {
+            // https://guides.rubyonrails.org/routing.html#shallow-nesting
+            let input = "
+        Rails.application.routes.draw do
+            resources :comments, only: [:show, :edit, :update, :destroy]
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
+
+        #[test]
+        fn shallow_do() {
+            // https://guides.rubyonrails.org/routing.html#shallow-nesting
+            let input = "
+        Rails.application.routes.draw do
+            shallow do
+                resources :articles do
+                    resources :comments
+                    resources :quotes
+                    resources :drafts
+                end
+            end
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
+
+        #[test]
+        fn shallow_path() {
+            // https://guides.rubyonrails.org/routing.html#shallow-nesting
+            let input = "
+        Rails.application.routes.draw do
+            scope shallow_path: 'sekret' do
+                resources :articles do
+                    resources :comments, shallow: true
+                end
+            end
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
+
+        #[test]
+        fn shallow_prefix() {
+            // https://guides.rubyonrails.org/routing.html#shallow-nesting
+            let input = "
+        Rails.application.routes.draw do
+            scope shallow_prefix: 'sekret' do
+                resources :articles do
+                    resources :comments, shallow: true
+                end
+            end
+        end
+        ";
+            let result = parse_routes(&helper(input));
+            assert_eq!(result.is_ok(), true, "parsed okay");
+
+            let result = result.unwrap();
+            assert_eq!(result.len(), 6);
+        }
     }
 }

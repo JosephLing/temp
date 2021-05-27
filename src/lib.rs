@@ -390,16 +390,22 @@ fn parse_files(
     Ok(())
 }
 
-pub fn compute(root: &Path) -> Result<AppData, Box<dyn std::error::Error>> {
+pub fn compute<'a>(root: &Path) -> Result<AppData, Box<dyn std::error::Error>> {
     let mut route_path = root.to_path_buf();
-    route_path.push("test.routes");
+    route_path.push("config");
+    route_path.push("routes.rb");
     if !route_path.exists() {
         return Err("no test.routes file found in root of rails project directory, run `bundle exec rails r routes > test.routes` to generate the file".into());
     }
 
     let mut routes: HashMap<String, Request> = HashMap::new();
-    for route in parse_routes(&fs::read_to_string(route_path).unwrap())? {
-        routes.insert(route.uri.clone(), route);
+    for request in parse_routes(
+        &Parser::new(&fs::read(&route_path)?, Default::default())
+            .do_parse()
+            .ast
+            .unwrap(),
+    )? {
+        routes.insert(request.prefix.clone(), request);
     }
 
     let mut app_data = AppData {
